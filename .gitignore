@@ -102,3 +102,10 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+secret.py
+
+#This will be removed later once the website actually has a public release.
+/migrations
+app.db
+/sanic
