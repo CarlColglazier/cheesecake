@@ -7,6 +7,9 @@ from flask_socketio import SocketIO, emit
 from secret import TBA_KEY
 import tbapy
 
+#import eventlet
+#eventlet.monkey_patch()
+
 CURRENT_YEAR = 2018
 
 app = Flask(__name__)
@@ -54,8 +57,9 @@ class Event(db.Model):
     lat = db.Column(db.Float)
     lng = db.Column(db.Float)
     location_name = db.Column(db.String(100))
-    Name = db.Column(db.String(250))
+    name = db.Column(db.String(250))
     # TODO: Implement this.
+    district = None
     parent_event_key = None
     playoff_type = db.Column(db.Integer)
     playoff_type_string = db.Column(db.Integer)
@@ -68,6 +72,8 @@ class Event(db.Model):
     website = db.Column(db.String(100))
     week = db.Column(db.Integer)
     year = db.Column(db.Integer)
+    matches = db.relationship('Match', backref='matches', lazy=True)
+    awards = db.relationship('Award', backref='awards', lazy=True)
 
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
@@ -77,7 +83,7 @@ class Match(db.Model):
     # TODO
     alliances = None
     winning_alliance = db.Column(db.String(3))
-    event_key = None#db.relationship('Event', backref='matches', lazy=True)
+    event_key = db.Column(db.String(25), db.ForeignKey('event.key'))
     time = db.Column(db.Integer)
     actual_time = db.Column(db.Integer)
     predicted_time = db.Column(db.Integer)
@@ -90,7 +96,8 @@ class Award(db.Model):
     name = db.Column(db.String(100))
     award_type = db.Column(db.Integer)
     event_key = db.Column(db.String(25), db.ForeignKey('event.key'))
-    recipient_list = None#db.relationship('Teams', backref='awards', lazy=True)
+    # TODO: Implement this.
+    recipient_list = None
     year = db.Column(db.Integer)
 
 class Team(db.Model):
@@ -146,14 +153,19 @@ def scrape_teams():
 
 @socketio.on('teams')
 def get_teams():
+    pages = 20
     for i in range(20):
         teams = tba.teams(i)
         if len(teams) == 0:
             break
         for team in teams:
             db.session.merge(Team(**team))
-        db.session.commit()
-        emit('teams', teams)
+        emit('teams', float(i) / pages)
+        # Releases the thread.
+        socketio.sleep(0)
+    db.session.commit()
+    emit('teams', 1)
+        
 
 """
 @tasks.route('events/<int:year>')
@@ -163,9 +175,14 @@ def scrape_events(year):
 
 @socketio.on('events')
 def get_events():
-    for event in tba.events(CURRENT_YEAR):
+    emit('events', 0.001)
+    socketio.sleep(0)
+    events = tba.events(CURRENT_YEAR)
+    for i, event in enumerate(events):
         db.session.merge(Event(**event))
-        emit('events', event)
+        emit('events', float(i) / len(events))
+        socketio.sleep(0)
+    emit('events', 1)
     db.session.commit()
 
 """

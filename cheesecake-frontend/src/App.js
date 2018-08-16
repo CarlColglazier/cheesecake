@@ -9,9 +9,9 @@ import {
   NavbarBrand,
   Nav,
   NavItem,
-  NavLink
+  NavLink,
+  Progress
 } from 'reactstrap';
-//import { LinkContainer } from "react-router-bootstrap";
 import socketIOClient from "socket.io-client";
 import {
   BrowserRouter as Router,
@@ -74,24 +74,48 @@ class DistrictList extends Component {
   }
 }
 
-
-const Home = () => (
-  <div>
-    <h2>Home</h2>
-    <p>Click a button to run a task.</p>
-    <ButtonGroup>
-      <Button onClick={() => {
-          socket.emit("teams");
-        }}>Teams</Button>
-      <Button onClick={() => {
-          socket.emit("districts");
-        }}>Districts</Button>
-      <Button onClick={() => {
-          socket.emit("events");
-        }}>Events</Button>
-    </ButtonGroup>
-  </div>
-);
+class Home extends Component {
+  constructor() {
+    super();
+    this.state = {
+      progress: 0
+    };
+  }
+  render() {
+    return (
+      <div>
+        <h2>Home</h2>
+        <p>Click a button to run a task.</p>
+        <ButtonGroup>
+          <Button onClick={() => {
+              socket.emit("teams");
+              socket.on("teams", data => {
+                this.setState({
+                  "progress": data * 100
+                });
+              });
+            }}>Teams</Button>
+          <Button onClick={() => {
+              socket.emit("districts");
+            }}>Districts</Button>
+          <Button onClick={() => {
+              socket.emit("events");
+              socket.on("events", data => {
+                this.setState({
+                  "progress": data * 100
+                });
+              });
+            }}>Events</Button>
+        </ButtonGroup>
+        {this.state.progress > 0 && this.state.progress < 100 ? (
+          <Progress value={this.state.progress} />
+        ) : (
+          <div></div>
+        )}
+      </div>
+    );
+  }
+}
 
 /*
 const About = () => (
@@ -166,9 +190,5 @@ class App extends Component {
     );
   }
 }
-
-/*
-              
-*/
 
 export default App;
