@@ -13,7 +13,8 @@ import tbapy
 CURRENT_YEAR = 2018
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"/*":{"origins":"http://localhost:3000"}})
+#cors = CORS(app, resources={r"/*":{"origins":"http://localhost:3000"}})
+cors = CORS(app, resources={r"/*":{"origins":"*"}})
 tba = tbapy.TBA(TBA_KEY)
 #tasks = Blueprint('tasks', __name__)
 api = Blueprint('api', __name__)
@@ -75,6 +76,9 @@ class Event(db.Model):
     matches = db.relationship('Match', backref='matches', lazy=True)
     awards = db.relationship('Award', backref='awards', lazy=True)
 
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
     comp_level = db.Column(db.String(2))
@@ -90,6 +94,10 @@ class Match(db.Model):
     post_result_time = db.Column(db.Integer)
     # TODO
     score_breakdown = None
+    videos = None
+
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Award(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,6 +107,9 @@ class Award(db.Model):
     # TODO: Implement this.
     recipient_list = None
     year = db.Column(db.Integer)
+
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Team(db.Model):
     key = db.Column(db.String(8), primary_key=True)
@@ -122,34 +133,15 @@ class Team(db.Model):
     # This one still needs to be implemented.
     home_championship = None
 
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
     @property
     def serialize(self):
         return {
             "key": self.key,
             "nickname": self.nickname
         }
-
-"""
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
-
-@tasks.route('/status')
-def status():
-    return jsonify(tba.status())
-
-@tasks.route('/teams')
-def scrape_teams():
-    teams = []
-    # TODO: This probably shouldn't be hard coded.
-    for i in range(20):
-        teams += tba.teams(i)
-    for team in teams:
-        db.session.merge(Team(**team))
-    db.session.commit()
-    return jsonify(teams)
-"""
 
 @socketio.on('teams')
 def get_teams():
@@ -165,13 +157,6 @@ def get_teams():
         socketio.sleep(0)
     db.session.commit()
     emit('teams', 1)
-        
-
-"""
-@tasks.route('events/<int:year>')
-def scrape_events(year):
-    return jsonify(tba.events(year))
-"""
 
 @socketio.on('events')
 def get_events():
@@ -185,20 +170,23 @@ def get_events():
     emit('events', 1)
     db.session.commit()
 
-"""
-@tasks.route('districts/<int:year>')
-def scrape_districts(year):
-    districts = tba.districts(year)
-    for district in districts:
-        db.session.merge(District(**district))
-    db.session.commit()
-    return jsonify(districts)
-"""
-
 @socketio.on('districts')
 def get_districts():
     for district in tba.districts(CURRENT_YEAR):
         db.session.merge(District(**district))
+    db.session.commit()
+
+@socketio.on('matches')
+def get_matches():
+    events = Event.query.all()
+    for i, event in enumerate(events):
+        matches = tba.event_matches(event.key)
+        for match in matches:
+            db.session.merge(Match(**match))
+        print(event.key)
+        emit('matches', float(i) / len(events))
+        socketio.sleep(0)
+    emit('matches', 1)
     db.session.commit()
 
 @api.route('teams/<int:page>', methods=['GET'])
@@ -215,6 +203,16 @@ def get_teams(page=1):
 @api.route('districts', methods=['GET'])
 def get_districts():
     return jsonify([x.as_dict() for x in District.query.all()])
+
+@api.route('events', methods=['GET'])
+def get_events():
+    return jsonify([x.as_dict() for x in Event.query.all()])
+
+@api.route('matches/<string:event>', methods=['GET'])
+def get_matches(event):
+    return jsonify([x.as_dict() for x in Match.query.filter(
+        Match.event_key == event
+    ).all()])
 
 #app.register_blueprint(tasks, url_prefix='/tasks')
 app.register_blueprint(api, url_prefix='/api')

@@ -19,8 +19,10 @@ import {
   Link
 } from "react-router-dom";
 
-const BASE_URL = `http://localhost:5000`;
+const BASE_URL = `http://` + window.location.hostname + `:5000`;
 const socket = socketIOClient(BASE_URL);
+
+console.log(BASE_URL);
 
 class TeamList extends Component {
   constructor() {
@@ -74,6 +76,32 @@ class DistrictList extends Component {
   }
 }
 
+class EventList extends Component {
+  constructor() {
+    super();
+    this.state = {
+      events: []
+    };
+  }
+  componentDidMount() {
+    fetch(BASE_URL + '/api/events')
+      .then(results => {
+        return results.json();
+      }).then(data => {
+        this.setState({
+          events: data
+        });
+      });
+  }
+  render() {
+    return (
+      <ul>
+        {this.state.events.map((e) => <li key={e.key}>{e.name}</li>)}
+      </ul>
+    );
+  }
+}
+
 class Home extends Component {
   constructor() {
     super();
@@ -106,6 +134,15 @@ class Home extends Component {
                 });
               });
             }}>Events</Button>
+          <Button onClick={() => {
+              socket.emit("matches");
+              socket.on("matches", data => {
+                this.setState({
+                  "progress": data * 100
+                });
+              });
+              }
+            }>Matches</Button>
         </ButtonGroup>
         {this.state.progress > 0 && this.state.progress < 100 ? (
           <Progress value={this.state.progress} />
@@ -116,14 +153,6 @@ class Home extends Component {
     );
   }
 }
-
-/*
-const About = () => (
-  <div>
-    <h2>About</h2>
-  </div>
-);
-*/
 
 const Teams = () => (
   <div>
@@ -136,6 +165,13 @@ const Districts = () => (
   <div>
     <h2>Districts</h2>
     <DistrictList/>
+  </div>
+);
+
+const Events = () => (
+  <div>
+    <h2>Events</h2>
+    <EventList/>
   </div>
 );
 
@@ -153,9 +189,7 @@ class App extends Component {
     });
   }
   componentDidMount = () => {
-    socket.on("teams", data => {
-      console.log(data);
-    });
+    //
   }
   render() {
     return (
@@ -176,6 +210,9 @@ class App extends Component {
                   <NavItem>
                     <NavLink tag={Link} to="/districts">Districts</NavLink>
                   </NavItem>
+                  <NavItem>
+                    <NavLink tag={Link} to="/events">Events</NavLink>
+                  </NavItem>
                 </Nav>
               </Collapse>
             </Navbar>
@@ -184,6 +221,7 @@ class App extends Component {
             <Route exact path="/" component={Home} />
             <Route path="/teams" component={Teams} />
             <Route path="/districts" component={Districts} />
+            <Route path="/events" component={Events} />
           </Container>
         </div>
       </Router>
