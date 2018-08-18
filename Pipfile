@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+tbapy = "*"
+flask-cors = "*"
+flask-script = "*"
+flask-migrate = "*"
+flask-sqlalchemy = "*"
+flask-socketio = "*"
+eventlet = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.6"
