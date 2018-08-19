@@ -1,4 +1,7 @@
 from flask import Blueprint, jsonify
+from sqlalchemy.orm import joinedload
+from functools import lru_cache
+
 from ..models import Team, Event, District, Match
 
 api = Blueprint('api', __name__)
@@ -30,7 +33,17 @@ def get_districts():
 def get_events():
     return jsonify([x.as_dict() for x in Event.query.all()])
 
-@api.route('matchtes/<string:event>', methods=['GET'])
+@api.route('matches', methods=['GET'])
+@lru_cache()
+def get_all_matches():
+    return jsonify(
+        [x.as_dict() for x in Match.query.options(
+            joinedload('alliances')
+        ).all()]
+    )
+
+
+@api.route('matches/<string:event>', methods=['GET'])
 def get_matches(event):
     return jsonify([x.as_dict() for x in Match.query.filter(
         Match.event_key == event

@@ -50,13 +50,39 @@ class Event(db.Model):
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+alliance_teams = db.Table('alliance_teams',
+                          db.Column('alliance_id', db.Integer,
+                                    db.ForeignKey('alliance.key'),
+                                    primary_key=True),
+                          db.Column('team_key', db.String(25),
+                                    db.ForeignKey('team.key'),
+                                    primary_key=True)
+)
+
+class Alliance(db.Model):
+    key = db.Column(db.String(25), primary_key=True)
+    score = db.Column(db.Integer)
+    color = db.Column(db.String(10))
+    team_keys = db.relationship(
+        'Team',
+        secondary=alliance_teams,
+        lazy='subquery',
+        backref=db.backref('alliances', lazy=True))
+    match_key = db.Column(db.String(25), db.ForeignKey('match.key'))
+    surrogate_team_keys = None
+    dq_team_keys = None
+
+    def as_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        d["team_keys"] = [x.key for x in self.team_keys]
+        return d
+
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
     comp_level = db.Column(db.String(2))
     set_number = db.Column(db.Integer)
     match_number = db.Column(db.Integer)
-    # TODO
-    alliances = None
+    alliances = db.relationship('Alliance', backref='match')
     winning_alliance = db.Column(db.String(3))
     event_key = db.Column(db.String(25), db.ForeignKey('event.key'))
     time = db.Column(db.Integer)
@@ -68,7 +94,9 @@ class Match(db.Model):
     videos = None
 
     def as_dict(self):
-       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       d =  {c.name: getattr(self, c.name) for c in self.__table__.columns}
+       d["alliances"] = [x.as_dict() for x in self.alliances]
+       return d
 
 class Award(db.Model):
     id = db.Column(db.Integer, primary_key=True)
