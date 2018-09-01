@@ -73,9 +73,15 @@ class Alliance(db.Model):
     dq_team_keys = None
 
     def as_dict(self):
-        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        #d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        d = {}
+        d["score"] = self.score
+        d["color"] = self.color
         d["team_keys"] = [x.key for x in self.team_keys]
         return d
+
+    def team_number_sum(self):
+        return sum([x.team_number for x in self.team_keys])
 
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
@@ -94,9 +100,35 @@ class Match(db.Model):
     videos = None
 
     def as_dict(self):
-       d =  {c.name: getattr(self, c.name) for c in self.__table__.columns}
-       d["alliances"] = [x.as_dict() for x in self.alliances]
-       return d
+        d =  {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        d["alliances"] = [x.as_dict() for x in self.alliances]
+        return d
+
+    def get_alliances(self):
+        alliances = {}
+        for alliance in self.alliances:
+            alliances[alliance.color] = alliance
+        return alliances
+
+    def result(self):
+        """
+        Who won the match? 1 for red, 0 for blue, 0.5 for a tie.
+        None if something goes wrong or if the match hasn't been
+        played yet.
+        """
+        alliances = self.get_alliances()
+        if "red" not in alliances or "blue" not in alliances:
+            return None
+        # TODO: Should there be a function to check if a match has
+        # been played yet?
+        if alliances["red"].score == -1 and alliances["blue"].score == -1:
+            return None
+        if alliances["red"].score > alliances["blue"].score:
+            return 1
+        elif alliances["red"].score < alliances["blue"].score:
+            return 0
+        else:
+            return 0.5
 
 class Award(db.Model):
     id = db.Column(db.Integer, primary_key=True)
