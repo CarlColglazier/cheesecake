@@ -102,6 +102,34 @@ class EventList extends Component {
   }
 }
 
+class EloList extends Component {
+  constructor() {
+    super();
+    this.state = {
+      teams: []
+    };      
+  }
+
+  componentDidMount() {
+    fetch(BASE_URL + `/api/elo`)
+      .then(results => {
+        return results.json();
+      }).then(data => {
+        this.setState({
+          teams: data
+        });
+      });
+  }
+
+  render() {
+    return (
+      <ul>
+        {this.state.teams.map((e) => <li key={e.key}>{e.key}: {e.score}</li>)}
+      </ul>
+    );
+  }
+}
+
 class Home extends Component {
   constructor() {
     super();
@@ -175,6 +203,13 @@ const Events = () => (
   </div>
 );
 
+const Elo = () => (
+  <div>
+    <h2>Elo Rankings</h2>
+    <EloList/>
+  </div>
+);
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -213,6 +248,9 @@ class App extends Component {
                   <NavItem>
                     <NavLink tag={Link} to="/events">Events</NavLink>
                   </NavItem>
+                  <NavItem>
+                    <NavLink tag={Link} to="/elo">Elo Rankings</NavLink>
+                  </NavItem>
                 </Nav>
               </Collapse>
             </Navbar>
@@ -222,6 +260,7 @@ class App extends Component {
             <Route path="/teams" component={Teams} />
             <Route path="/districts" component={Districts} />
             <Route path="/events" component={Events} />
+            <Route path="/elo" component={Elo} />
           </Container>
         </div>
       </Router>

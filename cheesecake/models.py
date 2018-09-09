@@ -130,6 +130,12 @@ class Match(db.Model):
         else:
             return 0.5
 
+    def diff(self):
+        alliances = self.get_alliances()
+        if "red" not in alliances or "blue" not in alliances:
+            return None
+        return  alliances["red"].score -  alliances["blue"].score
+
 class Award(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))

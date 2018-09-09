@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify
 from sqlalchemy.orm import joinedload
 from functools import lru_cache
+from scipy.stats import norm
 
 from ..models import Team, Event, District, Match, Alliance
 
@@ -15,6 +16,9 @@ class Predictor(abc.ABC):
         return 0.0
 
     def add_result(self, match: Match):
+        return
+
+    def current_values(self):
         return
 
 class TeamNumberPredictor(Predictor):
@@ -61,6 +65,23 @@ class EloPredictor(Predictor):
         for team in alliances["blue"].team_keys:
             self.elos[team.key] -= change
 
+    def current_values(self):
+        return self.elos
+
+class EloScorePredictor(EloPredictor):
+    def add_result(self, match: Match):
+        expected = self.predict_match(match)
+        expected_score = norm.ppf(expected, loc=0, scale=225)
+        actual = match.diff()
+        change = self.k * (actual - expected_score) / 225
+        if match.comp_level != "qm":
+            change /= 3
+        alliances = match.get_alliances()
+        for team in alliances["red"].team_keys:
+            self.elos[team.key] += change
+        for team in alliances["blue"].team_keys:
+            self.elos[team.key] -= change
+
 @lru_cache(maxsize=1)
 def fetch_all_matches():
     return Match.query.join(Event).filter(
@@ -71,10 +92,25 @@ def fetch_all_matches():
         Match.time
     ).all()
 
+@lru_cache()
+def run_elo():
+    matches = fetch_all_matches()
+    predictor = EloScorePredictor()
+    for match in matches:
+        predictor.add_result(match)
+    return predictor
+
 @api.route('elo')
 def elo():
-    matches = Match.query.all()
-    return '{}'.format(len(matches))
+    predictor = run_elo()
+    scores = []
+    for key, value in predictor.current_values().items():
+        scores.append({
+            "key": key,
+            "score": value
+        })
+    return jsonify(scores)
+        
 
 @api.route('predict/red')
 def predict_red():
@@ -113,10 +149,30 @@ def predict_elo():
     results = []
     predictor = EloPredictor()
     for match in matches:
-        results.append({
-            "predicted": predictor.predict_match(match),
-            "actual": match.result()
-        })
+        #if not(match.comp_level == "qm" and match.match_number < 30):
+        if True == True:
+            results.append({
+                "predicted": predictor.predict_match(match),
+                "actual": match.result()
+            })
+        predictor.add_result(match)
+    return "{} {}".format(
+        len([x for x in results if x["actual"] != 0.5 and abs(x["predicted"] - x["actual"]) < 0.5]) / len(results),
+        sum((x["actual"] - x["predicted"]) ** 2 for x in results) / len(results)
+    )
+
+@api.route('predict/eloscore')
+def predict_elo_score():
+    matches = fetch_all_matches()
+    results = []
+    predictor = EloScorePredictor()
+    for match in matches:
+        #if not(match.comp_level == "qm" and match.match_number < 30):
+        if True == True:
+            results.append({
+                "predicted": predictor.predict_match(match),
+                "actual": match.result()
+            })
         predictor.add_result(match)
     return "{} {}".format(
         len([x for x in results if x["actual"] != 0.5 and abs(x["predicted"] - x["actual"]) < 0.5]) / len(results),

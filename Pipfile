@@ -12,6 +12,7 @@ flask-migrate = "*"
 flask-sqlalchemy = "*"
 flask-socketio = "*"
 eventlet = "*"
+scipy = "*"
 
 [dev-packages]
 
