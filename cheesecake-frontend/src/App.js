@@ -123,9 +123,9 @@ class EloList extends Component {
 
   render() {
     return (
-      <ul>
+      <ol>
         {this.state.teams.map((e) => <li key={e.key}>{e.key}: {e.score}</li>)}
-      </ul>
+      </ol>
     );
   }
 }
