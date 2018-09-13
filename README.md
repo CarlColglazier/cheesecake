@@ -40,29 +40,19 @@ Tools
 
 Since this is a side project, we wanted to use this as an opportunity
 to try out some new tools. The back-end is currently being developed
-using Sanic, an asynchronous Python web server. The front-end tools
-are still being identified, but we'll probably end up using React
-or something similar.
+using Flask. The front-end uses React.
 
 Design
 ======
 
 Coming soon. Based on some early sketches, Cheesecake will likely contain
 
-
-
-1. A web interface for scouting data entry
-2. Scrapers for gathering third-party data (scores, breakdowns, etc.)
-3. A system for statistical analysis and visualization
-4. Match and rank predictions
-
+1. Tools for gathering third-party data (scores, breakdowns, etc.)
+2. A system for statistical analysis and visualization
+3. Match and rank predictions
+4. A web interface for scouting data entry
 
 Installation
 ============
 
-It is recommended that you use a virtual environment when installing
-and setting up Cheesecake.
-
-```python
-pip install -r requirements.txt
-```
+This project uses Pipenv. To get started, run `pipenv install --dev`.
