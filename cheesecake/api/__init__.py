@@ -2,148 +2,33 @@ from flask import Blueprint, jsonify
 from sqlalchemy.orm import joinedload
 from functools import lru_cache
 from operator import itemgetter
-from scipy.stats import norm
-from trueskill import Rating, BETA, global_env, rate
+
+import numpy as np
+
 import itertools
 import math
 
-from ..models import Team, Event, District, Match, Alliance
-
-import abc
+from ..models import *
+from ..predictors import *
 
 api = Blueprint('api', __name__)
 
-## TODO:
-## This is very much a work in progress!
-class Predictor(abc.ABC):
-    def predict_match(self, match: Match) -> float:
-        return 0.0
-
-    def add_result(self, match: Match):
-        return
-
-    def current_values(self):
-        return
-
-class TeamNumberPredictor(Predictor):
-    def predict_match(self, match: Match) -> float:
-        alliances = match.get_alliances()
-        blue = sum([x.team_number for x in alliances["blue"].team_keys])
-        red = sum([x.team_number for x in alliances["red"].team_keys])
-        return 1 - red / (red + blue)
-
-class RedPredictor(Predictor):
-    def predict_match(self, match: Match) -> float:
-        if match.comp_level == "qm":
-            return 0.5
-        return 0.75
-
-class EloPredictor(Predictor):
-    def __init__(self):
-        self.elos = {}
-        self.k = 48
-
-    def _get_elo(self, team) -> float:
-        if team not in self.elos:
-            self.elos[team] = 0.0
-        return self.elos[team]
-
-    def _alliance_elo(self, alliance: Alliance) -> float:
-        return sum([self._get_elo(t.key) for t in alliance.team_keys])
-
-    def predict_match(self, match: Match) -> float:
-        alliances = match.get_alliances()
-        red = self._alliance_elo(alliances["red"])
-        blue = self._alliance_elo(alliances["blue"])
-        return 1 / (1 + 10 ** ((blue - red) / 400.0))
-
-    def add_result(self, match: Match):
-        expected = self.predict_match(match)
-        actual = match.result()
-        change = self.k * (actual - expected)
-        if match.comp_level != "qm":
-            change /= 3
-        alliances = match.get_alliances()
-        for team in alliances["red"].team_keys:
-            self.elos[team.key] += change
-        for team in alliances["blue"].team_keys:
-            self.elos[team.key] -= change
-
-    def current_values(self):
-        return self.elos
-
-class TrueSkillPredictor(Predictor):
-    def __init__(self):
-        self.ratings = {}
-
-    def _get_rating(self, team) -> Rating:
-        if team not in self.ratings:
-            self.ratings[team] = Rating()
-        return self.ratings[team]
-
-    def _alliance_ratings(self, alliance: Alliance):
-        return [self._get_rating(t.key) for t in alliance.team_keys]
-
-    def win_probability(self, team1, team2):
-        beta = BETA
-        delta_mu = sum(r.mu for r in team1) - sum(r.mu for r in team2)
-        sum_sigma = sum(r.sigma ** 2 for r in itertools.chain(team1, team2))
-        size = len(team1) + len(team2)
-        denom = math.sqrt(size * (beta * beta) + sum_sigma)
-        ts = global_env()
-        return ts.cdf(delta_mu / denom)
-
-    def predict_match(self, match: Match) -> float:
-        alliances = match.get_alliances()
-        red = self._alliance_ratings(alliances["red"])
-        blue = self._alliance_ratings(alliances["blue"])
-        return self.win_probability(red, blue)
-
-    def add_result(self, match: Match):
-        alliances = match.get_alliances()
-        red = self._alliance_ratings(alliances["red"])
-        blue = self._alliance_ratings(alliances["blue"])
-        actual = match.diff()
-        r_red, r_blue = rate([red, blue], ranks=[1-int(actual), int(actual)])
-        for i, rating in enumerate(r_red):
-            self.ratings[alliances["red"].team_keys[i].key] = rating
-        for i, rating in enumerate(r_blue):
-            self.ratings[alliances["blue"].team_keys[i].key] = rating
-
-    def current_values(self):
-        r = {}
-        for key, value in self.ratings.items():
-            r[key] = value.mu - 3 * value.sigma
-        return r
-
-class EloScorePredictor(EloPredictor):
-    def add_result(self, match: Match):
-        expected = self.predict_match(match)
-        expected_score = norm.ppf(expected, loc=0, scale=225)
-        actual = match.diff()
-        change = self.k * (actual - expected_score) / 225
-        if match.comp_level != "qm":
-            change /= 3
-        alliances = match.get_alliances()
-        for team in alliances["red"].team_keys:
-            self.elos[team.key] += change
-        for team in alliances["blue"].team_keys:
-            self.elos[team.key] -= change
-
-@lru_cache(maxsize=1)
+@lru_cache()
 def fetch_all_matches():
     return Match.query.join(Event).filter(
         Event.event_type < 10
     ).options(
         joinedload('alliances')
     ).order_by(
-        Match.time
+        Event.start_date,
+        Match.time,
+        Match.match_number
     ).all()
 
 @lru_cache()
 def run_elo():
     matches = fetch_all_matches()
-    predictor = TrueSkillPredictor()
+    predictor = EloScorePredictor()
     for match in matches:
         predictor.add_result(match)
     return predictor
@@ -159,7 +44,6 @@ def elo():
         })
     return jsonify(scores)
         
-
 @api.route('predict/red')
 def predict_red():
     matches = fetch_all_matches()
@@ -170,7 +54,6 @@ def predict_red():
             "predicted": predictor.predict_match(match),
             "actual": match.result()
         })
-    #return jsonify(results)
     return "{}\n{}".format(
         len([x for x in results if x["actual"] == 1]) / len(results),
         sum([(x["actual"] - x["predicted"]) ** 2 for x in results]) / len(results)
@@ -197,8 +80,7 @@ def predict_elo():
     results = []
     predictor = EloPredictor()
     for match in matches:
-        #if not(match.comp_level == "qm" and match.match_number < 30):
-        if True == True:
+        if match.key[0:4] == "2018":
             results.append({
                 "predicted": predictor.predict_match(match),
                 "actual": match.result()
@@ -215,15 +97,32 @@ def predict_elo_score():
     results = []
     predictor = EloScorePredictor()
     for match in matches:
-        results.append({
-            "predicted": predictor.predict_match(match),
-            "actual": match.result()
-        })
+        if match.key[0:4] == "2018":
+            results.append({
+                "predicted": predictor.predict_match(match),
+                "actual": match.result()
+            })
         predictor.add_result(match)
     return "{} {}".format(
         len([x for x in results if x["actual"] != 0.5 and abs(x["predicted"] - x["actual"]) < 0.5]) / len(results),
         sum((x["actual"] - x["predicted"]) ** 2 for x in results) / len(results)
     )
+
+@api.route('predict/eloscore/team/<string:team>')
+def predict_elo_score_team(team):
+    matches = fetch_all_matches()
+    results = {}
+    predictor = EloScorePredictor()
+    team_matches = [x.match.as_dict() for x in Team.query.get(team).alliances]
+    keys = [x.match.key for x in Team.query.get(team).alliances]
+    for match in matches:
+        prediction = predictor.predict_match(match),
+        predictor.add_result(match)
+        if match.key in keys:
+            results[match.key] = prediction
+    for match in team_matches:
+        match["prediction"] = results[match["key"]]
+    return jsonify(sorted(team_matches, key=lambda x: x["actual_time"]))
 
 @api.route('predict/ts')
 def predict_trueskill_score():
@@ -266,15 +165,6 @@ def get_official_events():
     return jsonify([x.as_dict() for x in events])
 
 @api.route('matches', methods=['GET'])
-@lru_cache()
-def get_all_matches():
-    return jsonify(
-        [x.as_dict() for x in Match.query.options(
-            joinedload('alliances')
-        ).all()]
-    )
-
-@api.route('matches/official', methods=['GET'])
 def get_official_matches():
     matches = fetch_all_matches()
     return jsonify([x.as_dict() for x in matches])
@@ -284,3 +174,101 @@ def get_matches(event):
     return jsonify([x.as_dict() for x in Match.query.filter(
         Match.event_key == event
     ).all()])
+
+@api.route('team/<string:key>/matches', methods=['GET'])
+def get_team_matches(key):
+    return jsonify([x.match.as_dict() for x in Team.query.get(key).alliances])
+
+@lru_cache()
+def get_18_auto():
+    results = {}
+    keys = Team.query.with_entities(Team.key).all()
+    keys = [x[0] for x in keys]
+    for key in keys:
+        results[key] = {
+            "move": 0,
+            "switch": 0,
+            "moveswitch": 0,
+            "attempts": 0
+        }
+    matches = fetch_all_matches()
+    for match in matches:
+        for alliance in match.alliances:
+            color = alliance.color
+            for i, team in enumerate(alliance.team_keys):
+                key = team.key
+                auto_string = "autoRobot{}".format(i + 1)
+                results[key]["attempts"] += 1
+                if match.score_breakdown[color][auto_string] == "AutoRun":
+                    results[key]["move"] += 1
+                if match.score_breakdown[color]["autoSwitchAtZero"]:
+                    results[key]["switch"] += 1
+                results[key]["moveswitch"] += (
+                    match.score_breakdown[color][auto_string] and
+                    match.score_breakdown[color]["autoSwitchAtZero"]
+                )
+    return results
+
+@api.route('2018/auto')
+def api_get_18_auto():
+    results = get_18_auto()
+    l = []
+    for key, result in results.items():
+        result["team"] = key
+        l.append(result)
+    return jsonify(l)
+
+@api.route('event/<string:key>/predict/auto')
+def predict_event_auto(key):
+    alpha = 4.68
+    beta = 0.84
+    num_trials = 10_000
+    matches = Event.query.get(key).matches
+    results = get_18_auto()
+    predictions = {}
+    for match in matches:
+        alliances = match.get_alliances()
+        predictions[match.key] = {}
+        for color, alliance in alliances.items():
+            prob_move = np.ones(num_trials)
+            prob_switch = np.zeros(num_trials)
+            for team in alliance.team_keys:
+                auto = results[team.key]
+                a_move = 4.68 + auto["move"]
+                b_move = 0.84 + auto["attempts"] - auto["move"]
+                a_switch = 4.22 + auto["switch"]
+                b_switch = 3.04 + auto["attempts"] - auto["switch"]
+                prob_move *= np.random.beta(a_move, b_move, size=num_trials)
+                prob_switch = np.maximum(
+                    prob_switch,
+                    np.random.beta(a_switch, b_switch, size=num_trials)
+                )
+            predictions[match.key][color] = np.median(prob_move * prob_switch)
+    return jsonify(predictions)
+
+    
+@api.route('2018/endgame')
+def get_18_endgame():
+    results = {}
+    keys = Team.query.with_entities(Team.key).all()
+    keys = [x[0] for x in keys]
+    for key in keys:
+        results[key] = {
+            "runs": 0,
+            "attempts": 0
+        }
+    matches = fetch_all_matches()
+    for match in matches:
+        for alliance in match.alliances:
+            color = alliance.color
+            for i, team in enumerate(alliance.team_keys):
+                key = team.key
+                auto_string = "endgameRobot{}".format(i + 1)
+                results[key]["attempts"] += 1
+                if match.score_breakdown[color][auto_string] == "Climbing":
+                    results[key]["runs"] += 1
+    l = []
+    for key, result in results.items():
+        result["team"] = key
+        l.append(result)
+    return jsonify(l)

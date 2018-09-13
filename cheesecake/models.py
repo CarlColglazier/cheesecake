@@ -1,4 +1,5 @@
 from . import db
+from sqlalchemy.dialects.postgresql import JSON
 
 class District(db.Model):
     abbreviation = db.Column(db.String(10))
@@ -24,8 +25,8 @@ class Event(db.Model):
     first_event_code = db.Column(db.String(25))
     first_event_id = db.Column(db.String(50))
     gmaps_place_id = db.Column(db.String(100))
-    gmaps_url = db.Column(db.String(100))
-    key = db.Column(db.String(10), primary_key=True)
+    gmaps_url = db.Column(db.String(250))
+    key = db.Column(db.String(25), primary_key=True)
     lat = db.Column(db.Float)
     lng = db.Column(db.Float)
     location_name = db.Column(db.String(100))
@@ -34,7 +35,7 @@ class Event(db.Model):
     district = None
     parent_event_key = None
     playoff_type = db.Column(db.Integer)
-    playoff_type_string = db.Column(db.Integer)
+    playoff_type_string = db.Column(db.String(100))
     postal_code = db.Column(db.String(50))
     short_name = db.Column(db.String(250))
     start_date = db.Column(db.String(10))
@@ -51,10 +52,13 @@ class Event(db.Model):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 alliance_teams = db.Table('alliance_teams',
-                          db.Column('alliance_id', db.Integer,
+                          db.Column('position', db.Integer,
+                                    primary_key=True,
+                                    autoincrement=True),
+                          db.Column('alliance_id', db.String(25),
                                     db.ForeignKey('alliance.key'),
                                     primary_key=True),
-                          db.Column('team_key', db.String(25),
+                          db.Column('team_key', db.String(8),
                                     db.ForeignKey('team.key'),
                                     primary_key=True)
 )
@@ -67,13 +71,13 @@ class Alliance(db.Model):
         'Team',
         secondary=alliance_teams,
         lazy='subquery',
+        order_by=alliance_teams.c.position,
         backref=db.backref('alliances', lazy=True))
     match_key = db.Column(db.String(25), db.ForeignKey('match.key'))
     surrogate_team_keys = None
     dq_team_keys = None
 
     def as_dict(self):
-        #d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
         d = {}
         d["score"] = self.score
         d["color"] = self.color
@@ -89,14 +93,14 @@ class Match(db.Model):
     set_number = db.Column(db.Integer)
     match_number = db.Column(db.Integer)
     alliances = db.relationship('Alliance', backref='match')
-    winning_alliance = db.Column(db.String(3))
+    winning_alliance = db.Column(db.String(5))
     event_key = db.Column(db.String(25), db.ForeignKey('event.key'))
     time = db.Column(db.Integer)
     actual_time = db.Column(db.Integer)
     predicted_time = db.Column(db.Integer)
     post_result_time = db.Column(db.Integer)
     # TODO
-    score_breakdown = None
+    score_breakdown = db.Column(JSON)
     videos = None
 
     def as_dict(self):

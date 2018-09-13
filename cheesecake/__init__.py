@@ -6,10 +6,14 @@ from flask_migrate import Migrate
 from secret import *
 import tbapy
 
-from config import Config
+from config import DevelopmentConfig
 
 # Flask extensions
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={
+    "autoflush": False,
+    "autocommit": False,
+    "expire_on_commit": False
+})
 socketio = SocketIO()
 
 # Other
@@ -24,7 +28,7 @@ from . import events
 def create_app():
     app = Flask(__name__)
     
-    app.config.from_object(Config)
+    app.config.from_object(DevelopmentConfig)
 
     db.init_app(app)
     cors = CORS(app, resources={r"/*":{"origins":"*"}})

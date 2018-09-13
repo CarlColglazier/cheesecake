@@ -22,11 +22,15 @@ def get_teams():
 def get_events():
     socketio.emit('events', 0.001)
     socketio.sleep(0)
-    events = tba.events(CURRENT_YEAR)
-    for i, event in enumerate(events):
-        db.session.merge(Event(**event))
-        socketio.emit('events', float(i) / len(events))
-        socketio.sleep(0)
+    for year in range(2003, CURRENT_YEAR):
+        events = tba.events(year)
+        for i, event in enumerate(events):
+            if event["event_type"] > 10:
+                continue
+            db.session.merge(Event(**event))
+            db.session.commit()
+            socketio.sleep(0)
+        socketio.emit('events', (year - 2003) / (CURRENT_YEAR - 2003))
     socketio.emit('events', 1)
     db.session.commit()
 
@@ -39,9 +43,7 @@ def get_districts():
 @socketio.on('matches')
 def get_matches():
     events = Event.query.all()
-    existing_matches = set(Match.query.with_entities(Match.key).all())
-    print(existing_matches)
-    print(len(existing_matches))
+    existing_matches = set(x[0] for x in Match.query.with_entities(Match.key).all())
     for i, event in enumerate(events):
         matches = tba.event_matches(event.key)
         for match in matches:
@@ -66,12 +68,13 @@ def get_matches():
                     t = Team.query.get(team)
                     if t:
                         blue.team_keys.append(t)
-                db.session.add(red)
-                db.session.add(blue)
                 del match["alliances"]
                 db.session.add(Match(**match))
+                db.session.add(red)
+                db.session.add(blue)
         print(event.key)
         socketio.emit('matches', float(i) / len(events))
+        db.session.commit()
         socketio.sleep(0)
     socketio.emit('matches', 1)
-    db.session.commit()
+    #db.session.commit()

@@ -130,6 +130,40 @@ class EloList extends Component {
   }
 }
 
+class TeamHistory extends Component {
+  constructor() {
+    super();
+    this.state = {
+      matches: []
+    };
+  }
+
+  componentDidMount() {
+    fetch(BASE_URL + `/api/predict/eloscore/team/frc254`)
+      .then(results => {
+        return results.json();
+      }).then(data => {
+        this.setState({
+          matches: data
+        });
+      });
+  }
+
+  render() {
+    return (
+      <table>
+        <tbody>
+          <tr><th>Prediction</th><th>Red</th><th>Blue</th></tr>
+          {this.state.matches.map((m) => <tr key={m.key}>
+                                  <td>{m.prediction[0].toFixed(2)}</td>
+                                    {m.alliances.map(a => <td>{a.score}</td>)}
+          </tr>)}
+        </tbody>
+      </table>
+    );
+  }
+}
+
 class Home extends Component {
   constructor() {
     super();
@@ -210,6 +244,12 @@ const Elo = () => (
   </div>
 );
 
+const TeamData = () => (
+  <div>
+    <TeamHistory/>
+  </div>
+);
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -261,6 +301,7 @@ class App extends Component {
             <Route path="/districts" component={Districts} />
             <Route path="/events" component={Events} />
             <Route path="/elo" component={Elo} />
+            <Route path="/team/:key" component={TeamData} />
           </Container>
         </div>
       </Router>

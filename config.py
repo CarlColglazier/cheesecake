@@ -1,10 +1,21 @@
 import os
+from secret import *
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
-    DEBUG = True
-    SECRET_KEY = 'secret_key'
-    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(basedir, "app.db")
+    DEBUG = False
+    TESTING = False
+    SECRET_KEY = KEY
+    SQLALCHEMY_DATABASE_URI = DATABASE
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+class ProductionConfig(Config):
+    DEBUG = False
+
+class DevelopmentConfig(Config):
+    DEVELOPMENT = True
+    DEBUG = True
+
+class TestingConfig(Config):
+    TESTING = True
