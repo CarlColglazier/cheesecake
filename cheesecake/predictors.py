@@ -7,8 +7,16 @@ from trueskill import Rating, BETA, global_env, rate
 ## TODO:
 ## This is very much a work in progress!
 class Predictor(abc.ABC):
+    def __init__(self):
+        self.prediction_history = {}
+
     def predict_match(self, match: Match) -> float:
         return 0.0
+
+    def predict(self, match: Match) -> float:
+        p = self.predict_match(match)
+        self.prediction_history[match.key] = p
+        return p
 
     def add_result(self, match: Match):
         return
@@ -31,8 +39,9 @@ class RedPredictor(Predictor):
 
 class EloPredictor(Predictor):
     def __init__(self):
+        super().__init__()
         self.elos = {}
-        self.k = 16
+        self.k = 12
 
     def _get_elo(self, team) -> float:
         if team not in self.elos:
@@ -51,6 +60,8 @@ class EloPredictor(Predictor):
     def add_result(self, match: Match):
         expected = self.predict_match(match)
         actual = match.result()
+        if actual is None or expected is None:
+            return
         change = self.k * (actual - expected)
         if match.comp_level != "qm":
             change /= 3
@@ -65,6 +76,7 @@ class EloPredictor(Predictor):
 
 class TrueSkillPredictor(Predictor):
     def __init__(self):
+        super().__init__()
         self.ratings = {}
 
     def _get_rating(self, team) -> Rating:
@@ -113,9 +125,9 @@ class EloScorePredictor(EloPredictor):
         self.stds = {
             "2003": 50.9,
             "2004": 45.6,
-            "2005": 24.6,
-            "2006": 28.4,
-            "2007": 46.2,
+            "2005": 15.5,
+            "2006": 20.5,
+            "2007": 32.9,
             "2008": 24.4,
             "2009": 21.0,
             "2010": 2.7,
@@ -124,9 +136,9 @@ class EloScorePredictor(EloPredictor):
             "2013": 31.1,
             "2014": 49.3,
             "2015": 33.2,
-            "2016": 47.0,
-            "2017": 95.0,
-            "2018": 225.0
+            "2016": 27.5,
+            "2017": 70.6,
+            "2018": 106.9
         }
         self.last_year = "2002"
 
@@ -142,12 +154,8 @@ class EloScorePredictor(EloPredictor):
             self._dampen()
         scale = self.stds[year]
         expected_score = norm.ppf(expected, loc=0, scale=scale)
-        if match.comp_level != "qm":
-            expected_score = norm.ppf(expected, loc=0, scale=scale/2)
         actual = match.diff()
         change = self.k * (actual - expected_score) / scale
-        #if match.comp_level != "qm":
-        #    change /= 2
         alliances = match.get_alliances()
         for team in alliances["red"].team_keys:
             self.elos[team.key] += change

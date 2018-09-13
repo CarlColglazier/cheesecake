@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 from functools import lru_cache
 from operator import itemgetter
-
+import pickle
 import numpy as np
 
 import itertools
@@ -13,6 +13,15 @@ from ..predictors import *
 
 api = Blueprint('api', __name__)
 
+_whens = {
+    "qm": 0,
+    "ef": 10,
+    "qf": 11,
+    "sf": 12,
+    "f": 13
+}
+sort_order = db.case(value=Match.comp_level, whens=_whens)
+
 @lru_cache()
 def fetch_all_matches():
     return Match.query.join(Event).filter(
@@ -22,16 +31,28 @@ def fetch_all_matches():
     ).order_by(
         Event.start_date,
         Match.time,
+        sort_order,
         Match.match_number
     ).all()
 
 @lru_cache()
 def run_elo():
-    matches = fetch_all_matches()
-    predictor = EloScorePredictor()
-    for match in matches:
-        predictor.add_result(match)
-    return predictor
+    # This is kind of a hack, but I really don't want to keep
+    # having to run this over and over again on each refresh,
+    # so I'm going to just load it from a file.
+    try:
+        filehandler = open("elo.pickle", 'rb')
+        predictor = pickle.load(filehandler)
+        return predictor
+    except:
+        matches = fetch_all_matches()
+        predictor = EloScorePredictor()
+        for match in matches:
+            predictor.predict(match)
+            predictor.add_result(match)
+        filehandler = open("elo.pickle", 'wb')
+        pickle.dump(predictor, filehandler)
+        return predictor
 
 @api.route('elo')
 def elo():
@@ -42,7 +63,23 @@ def elo():
             "key": key,
             "score": value
         })
-    return jsonify(scores)
+    return jsonify(scores[0:100])
+
+@api.route('elo/<string:key>')
+def get_team_elo(key):
+    predictor = run_elo()
+    match_keys = [x.match.key for x in Team.query.get(key).alliances]
+    predictions = {}
+    for key in match_keys:
+        if key in predictor.prediction_history:
+            """
+            predictions.append({
+                "key": key,
+                "prediction": predictor.prediction_history[key]
+            })
+            """
+            predictions[key] = predictor.prediction_history[key]
+    return jsonify(predictions)
         
 @api.route('predict/red')
 def predict_red():
@@ -177,7 +214,32 @@ def get_matches(event):
 
 @api.route('team/<string:key>/matches', methods=['GET'])
 def get_team_matches(key):
-    return jsonify([x.match.as_dict() for x in Team.query.get(key).alliances])
+    m = Team.query.join(Team.alliances).options(
+        contains_eager('alliances')
+    ).filter(
+        Team.key == key
+    ).filter(
+        Alliance.key.like("2018%")
+    ).all()
+    if len(m) == 0:
+        return jsonify([])
+    team = m[0]
+    matches = [x.match for x in team.alliances]
+    matches = sorted(matches, key=lambda x: x.actual_time or -1)
+    keys = [x.key for x in matches]
+    alliances = Alliance.query.filter(
+        Alliance.match_key.in_(keys)
+    ).all()
+    alliance_table = {}
+    for alliance in alliances:
+        if alliance.match_key not in alliance_table:
+            alliance_table[alliance.match_key] = {}
+        alliance_table[alliance.match_key][alliance.color] = alliance.as_dict()
+    matches = [x.serialize for x in matches]
+    for match in matches:
+        match["alliances"] = alliance_table[match["key"]]
+    return jsonify(matches)
+        
 
 @lru_cache()
 def get_18_auto():

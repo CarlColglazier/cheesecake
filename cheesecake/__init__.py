@@ -33,7 +33,7 @@ def create_app():
     db.init_app(app)
     cors = CORS(app, resources={r"/*":{"origins":"*"}})
 
-    Migrate(app, db)
+    Migrate(app, db, compare_type=True)
 
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')

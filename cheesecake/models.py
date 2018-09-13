@@ -1,4 +1,5 @@
 from . import db
+#import enum
 from sqlalchemy.dialects.postgresql import JSON
 
 class District(db.Model):
@@ -87,6 +88,15 @@ class Alliance(db.Model):
     def team_number_sum(self):
         return sum([x.team_number for x in self.team_keys])
 
+"""
+class MatchLevel(enum.Enum):
+    qm = 0
+    ef = 10
+    qf = 11
+    sf = 12
+    f = 13
+"""
+
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
     comp_level = db.Column(db.String(2))
@@ -113,6 +123,16 @@ class Match(db.Model):
         for alliance in self.alliances:
             alliances[alliance.color] = alliance
         return alliances
+
+    @property
+    def serialize(self):
+        return {
+            "key": self.key,
+            "comp_level": self.comp_level,
+            "match_number": self.match_number
+            #"alliances": len(self.alliances)
+        }
+
 
     def result(self):
         """

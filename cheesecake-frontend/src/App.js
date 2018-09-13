@@ -10,9 +10,11 @@ import {
   Nav,
   NavItem,
   NavLink,
-  Progress
+  Progress,
+  Table
 } from 'reactstrap';
 import socketIOClient from "socket.io-client";
+//import PropTypes from 'prop-types';
 import {
   BrowserRouter as Router,
   Route,
@@ -44,7 +46,9 @@ class TeamList extends Component {
   render() {
     return (
       <ul>
-        {this.state.teams.map((team) => <li key={team.key}>{team.nickname}</li>)}
+        {this.state.teams.map((team) => (
+          <li key={team.key}><Link to={'/team/' + team.key}>{team.nickname}</Link></li>
+        ))}
       </ul>
     );
   }
@@ -124,13 +128,18 @@ class EloList extends Component {
   render() {
     return (
       <ol>
-        {this.state.teams.map((e) => <li key={e.key}>{e.key}: {e.score}</li>)}
+        {this.state.teams.map((e) => (
+          <li key={e.key}><Link to={'/team/' + e.key}>{e.key}</Link>: {e.score}</li>
+        ))}
       </ol>
     );
   }
 }
 
 class TeamHistory extends Component {
+  /*static propTypes = {
+    match: PropTypes.object.isRequired
+  };*/
   constructor() {
     super();
     this.state = {
@@ -139,27 +148,101 @@ class TeamHistory extends Component {
   }
 
   componentDidMount() {
-    fetch(BASE_URL + `/api/predict/eloscore/team/frc254`)
+    console.log(this.props.team);
+    fetch(BASE_URL + `/api/team/` + this.props.team + `/matches`)
       .then(results => {
         return results.json();
       }).then(data => {
+        for (var match of data) {
+          match["predictions"] = {
+            "elo": 0.5
+          };
+        }
         this.setState({
           matches: data
         });
+        fetch(BASE_URL + `/api/elo/` + this.props.team)
+          .then(results => {
+            return results.json();
+          }).then(elo_data => {
+            for (var match of data) {
+              match["predictions"] = {
+                "elo": elo_data[match["key"]]
+              };
+            }
+            console.log(data);
+            this.setState({
+              matches: data
+            });
+          });
       });
+  }
+
+  predict(fl) {
+    if (typeof fl !== "number") {
+      return "-";
+    }
+    if (fl < 0.006) {
+      return "Solid Blue";
+    } else if (fl < 0.067) {
+      return "Likely Blue";
+    } else if (fl < 0.309) {
+      return "Leans Blue";
+    } else if (fl < 0.691) {
+      return "Tossup";
+    } else if (fl < 0.933) {
+      return "Leans Red";
+    } else if (fl < 0.994) {
+      return "Likely Red";
+    } else {
+      return "Solid Red";
+    }
+  }
+
+  predict_color(fl) {
+    if (typeof fl !== "number") {
+      return "#ccc";
+    }
+    if (fl < 0.006) {
+      return "#ccf";
+    } else if (fl < 0.067) {
+      return "#ddf";
+    } else if (fl < 0.309) {
+      return "#eef";
+    } else if (fl < 0.691) {
+      return "white";
+    } else if (fl < 0.933) {
+      return "#fee";
+    } else if (fl < 0.994) {
+      return "#fdd";
+    } else {
+      return "#fcc";
+    }
   }
 
   render() {
     return (
-      <table>
+      <Table>
         <tbody>
-          <tr><th>Prediction</th><th>Red</th><th>Blue</th></tr>
-          {this.state.matches.map((m) => <tr key={m.key}>
-                                  <td>{m.prediction[0].toFixed(2)}</td>
-                                    {m.alliances.map(a => <td>{a.score}</td>)}
-          </tr>)}
+          <tr><th>Match</th><th></th><th></th><th></th><th></th><th></th><th></th><th>Red</th><th>Blue</th><th>Prediction</th></tr>
+          {this.state.matches.map((match) => (
+            <tr key={match.key}>
+              <td>{match.comp_level} {match.match_number}</td>
+              {match.alliances.red.team_keys.map((key) => (
+                <td key={key}>{key.substring(3)}</td>
+              ))}
+            {match.alliances.blue.team_keys.map((key) => (
+              <td key={key}>{key.substring(3)}</td>
+            ))}
+              <td>{match.alliances.red.score}</td>
+              <td>{match.alliances.blue.score}</td>
+              <td style={{backgroundColor: this.predict_color(match.predictions.elo)}}>
+                {this.predict(match.predictions.elo)}
+              </td>
+            </tr>
+          ))}
         </tbody>
-      </table>
+      </Table>
     );
   }
 }
@@ -239,14 +322,14 @@ const Events = () => (
 
 const Elo = () => (
   <div>
-    <h2>Elo Rankings</h2>
+    <h2>Rankings</h2>
     <EloList/>
   </div>
 );
 
-const TeamData = () => (
+const TeamData = (url) => (
   <div>
-    <TeamHistory/>
+    <TeamHistory team={url.match.params.key}/>
   </div>
 );
 
@@ -279,6 +362,7 @@ class App extends Component {
                   <NavItem>
                     <NavLink tag={Link} to="/">Home</NavLink>
                   </NavItem>
+                  {/*
                   <NavItem>
                     <NavLink tag={Link} to="/teams">Teams</NavLink>
                   </NavItem>
@@ -288,8 +372,9 @@ class App extends Component {
                   <NavItem>
                     <NavLink tag={Link} to="/events">Events</NavLink>
                   </NavItem>
+                  */}
                   <NavItem>
-                    <NavLink tag={Link} to="/elo">Elo Rankings</NavLink>
+                    <NavLink tag={Link} to="/elo">Rankings</NavLink>
                   </NavItem>
                 </Nav>
               </Collapse>
