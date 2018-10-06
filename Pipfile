@@ -17,6 +17,10 @@ trueskill = "*"
 "psycopg2" = "*"
 
 [dev-packages]
+pandas = "*"
+matplotlib = "*"
+scipy = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.7"

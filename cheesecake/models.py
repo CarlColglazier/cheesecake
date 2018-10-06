@@ -1,12 +1,26 @@
 from . import db
-#import enum
 from sqlalchemy.dialects.postgresql import JSON
+
+district_teams = db.Table('district_teams',
+                          db.Column('position', db.Integer,
+                                    primary_key=True),
+                          db.Column('district_key', db.String(10),
+                                    db.ForeignKey('district.key')),
+                          db.Column('team_key', db.String(8),
+                                    db.ForeignKey('team.key'))
+)
 
 class District(db.Model):
     abbreviation = db.Column(db.String(10))
     display_name = db.Column(db.String(100))
     key = db.Column(db.String(10), primary_key=True)
     year = db.Column(db.Integer)
+    teams = db.relationship(
+        'Team',
+        secondary=district_teams,
+        lazy='subquery',
+        order_by=district_teams.c.position,
+        backref=db.backref('districts', lazy=True))
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -88,15 +102,6 @@ class Alliance(db.Model):
     def team_number_sum(self):
         return sum([x.team_number for x in self.team_keys])
 
-"""
-class MatchLevel(enum.Enum):
-    qm = 0
-    ef = 10
-    qf = 11
-    sf = 12
-    f = 13
-"""
-
 class Match(db.Model):
     key = db.Column(db.String(25), primary_key=True)
     comp_level = db.Column(db.String(2))
@@ -129,7 +134,8 @@ class Match(db.Model):
         return {
             "key": self.key,
             "comp_level": self.comp_level,
-            "match_number": self.match_number
+            "match_number": self.match_number,
+            "winning_alliance": self.winning_alliance
             #"alliances": len(self.alliances)
         }
 

@@ -1,7 +1,5 @@
 import React, { Component } from 'react';
 import {
-  Button,
-  ButtonGroup,
   Collapse,
   Container,
   Navbar,
@@ -11,10 +9,10 @@ import {
   NavItem,
   NavLink,
   Progress,
+  Row,
   Table
 } from 'reactstrap';
 import socketIOClient from "socket.io-client";
-//import PropTypes from 'prop-types';
 import {
   BrowserRouter as Router,
   Route,
@@ -127,19 +125,21 @@ class EloList extends Component {
 
   render() {
     return (
-      <ol>
-        {this.state.teams.map((e) => (
-          <li key={e.key}><Link to={'/team/' + e.key}>{e.key}</Link>: {e.score}</li>
-        ))}
-      </ol>
+      <Table>
+        <tbody>
+          {this.state.teams.map((e) => (
+            <tr key={e.key}>
+              <td><Link to={'/team/' + e.key}>{e.key}</Link></td>
+              <td>{Math.round(e.score)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
     );
   }
 }
 
 class TeamHistory extends Component {
-  /*static propTypes = {
-    match: PropTypes.object.isRequired
-  };*/
   constructor() {
     super();
     this.state = {
@@ -183,19 +183,19 @@ class TeamHistory extends Component {
       return "-";
     }
     if (fl < 0.006) {
-      return "Solid Blue";
-    } else if (fl < 0.067) {
       return "Likely Blue";
-    } else if (fl < 0.309) {
+    } else if (fl < 0.067) {
       return "Leans Blue";
-    } else if (fl < 0.691) {
+    } else if (fl < 0.309) {
+      return "Tilts Blue";
+    } else if (fl < 0.6915) {
       return "Tossup";
-    } else if (fl < 0.933) {
+    } else if (fl < 0.93319) {
+      return "Tilts Red";
+    } else if (fl < 0.99379) {
       return "Leans Red";
-    } else if (fl < 0.994) {
-      return "Likely Red";
     } else {
-      return "Solid Red";
+      return "Likely Red";
     }
   }
 
@@ -224,7 +224,7 @@ class TeamHistory extends Component {
     return (
       <Table>
         <tbody>
-          <tr><th>Match</th><th></th><th></th><th></th><th></th><th></th><th></th><th>Red</th><th>Blue</th><th>Prediction</th></tr>
+          <tr><th>Match</th><th colSpan="6">Teams</th><th>Red</th><th>Blue</th><th>Prediction</th><th>Correct?</th></tr>
           {this.state.matches.map((match) => (
             <tr key={match.key}>
               <td>{match.comp_level} {match.match_number}</td>
@@ -234,10 +234,17 @@ class TeamHistory extends Component {
             {match.alliances.blue.team_keys.map((key) => (
               <td key={key}>{key.substring(3)}</td>
             ))}
-              <td>{match.alliances.red.score}</td>
-              <td>{match.alliances.blue.score}</td>
+              <td className={match.winning_alliance === "red" ? 'winner' : 'loser'}>
+              {match.alliances.red.score}
+            </td>
+              <td className={match.winning_alliance === "blue" ? 'winner' : 'loser'}>
+              {match.alliances.blue.score}
+            </td>
               <td style={{backgroundColor: this.predict_color(match.predictions.elo)}}>
                 {this.predict(match.predictions.elo)}
+            </td>
+              <td>
+              {this.predict(match.predictions.elo).toLowerCase().includes(match.winning_alliance) || this.predict(match.predictions.elo) === "Tossup" ? '' : 'x'}
               </td>
             </tr>
           ))}
@@ -258,42 +265,6 @@ class Home extends Component {
     return (
       <div>
         <h2>Home</h2>
-        <p>Click a button to run a task.</p>
-        <ButtonGroup>
-          <Button onClick={() => {
-              socket.emit("teams");
-              socket.on("teams", data => {
-                this.setState({
-                  "progress": data * 100
-                });
-              });
-            }}>Teams</Button>
-          <Button onClick={() => {
-              socket.emit("districts");
-            }}>Districts</Button>
-          <Button onClick={() => {
-              socket.emit("events");
-              socket.on("events", data => {
-                this.setState({
-                  "progress": data * 100
-                });
-              });
-            }}>Events</Button>
-          <Button onClick={() => {
-              socket.emit("matches");
-              socket.on("matches", data => {
-                this.setState({
-                  "progress": data * 100
-                });
-              });
-              }
-            }>Matches</Button>
-        </ButtonGroup>
-        {this.state.progress > 0 && this.state.progress < 100 ? (
-          <Progress value={this.state.progress} />
-        ) : (
-          <div></div>
-        )}
       </div>
     );
   }
@@ -329,6 +300,7 @@ const Elo = () => (
 
 const TeamData = (url) => (
   <div>
+    <h3>Team History - {url.match.params.key}</h3>
     <TeamHistory team={url.match.params.key}/>
   </div>
 );
@@ -381,12 +353,14 @@ class App extends Component {
             </Navbar>
           </header>
           <Container>
-            <Route exact path="/" component={Home} />
-            <Route path="/teams" component={Teams} />
-            <Route path="/districts" component={Districts} />
-            <Route path="/events" component={Events} />
-            <Route path="/elo" component={Elo} />
-            <Route path="/team/:key" component={TeamData} />
+            <Row>
+              <Route exact path="/" component={Home} />
+              <Route path="/teams" component={Teams} />
+              <Route path="/districts" component={Districts} />
+              <Route path="/events" component={Events} />
+              <Route path="/elo" component={Elo} />
+              <Route path="/team/:key" component={TeamData} />
+            </Row>
           </Container>
         </div>
       </Router>

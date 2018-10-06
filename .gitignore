@@ -110,3 +110,4 @@ secret.py
 /migrations
 app.db
 /sanic
+/papers
