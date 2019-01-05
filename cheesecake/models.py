@@ -131,12 +131,16 @@ class Match(db.Model):
 
     @property
     def serialize(self):
+        alliances = self.get_alliances()
+        for key in alliances:
+            alliances[key] = alliances[key].as_dict()
         return {
             "key": self.key,
             "comp_level": self.comp_level,
             "match_number": self.match_number,
-            "winning_alliance": self.winning_alliance
-            #"alliances": len(self.alliances)
+            "winning_alliance": self.winning_alliance,
+            "alliances": alliances
+            #"alliances": [x.as_dict() for x in self.alliances]
         }
 
 

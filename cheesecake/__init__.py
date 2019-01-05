@@ -23,7 +23,7 @@ tba = tbapy.TBA(TBA_KEY)
 from . import models
 
 # Import socket events.
-from . import events
+#from . import events
 
 def create_app():
     app = Flask(__name__)
