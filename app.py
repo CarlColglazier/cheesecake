@@ -4,7 +4,7 @@ from flask import Flask
 from flask.cli import FlaskGroup
 from cheesecake.models import Team, Event, Match, District, Alliance
 
-CURRENT_YEAR = 2018
+CURRENT_YEAR = 2019
 
 app = create_app()
 

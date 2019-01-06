@@ -5,6 +5,7 @@ from flask_socketio import SocketIO, emit
 from flask_migrate import Migrate
 from secret import *
 import tbapy
+import os
 
 from config import DevelopmentConfig
 
