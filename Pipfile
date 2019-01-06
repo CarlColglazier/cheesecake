@@ -16,6 +16,7 @@ scipy = "*"
 trueskill = "*"
 "psycopg2" = "*"
 "psycopg2-binary" = "*"
+uwsgi = "*"
 
 [dev-packages]
 pandas = "*"
