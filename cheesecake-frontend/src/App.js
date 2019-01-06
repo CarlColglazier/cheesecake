@@ -21,7 +21,12 @@ import {
   Link
 } from "react-router-dom";
 
-const BASE_URL = `http://` + window.location.hostname + `:5000`;
+var BASE_URL;
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+  BASE_URL = `http://` + window.location.hostname + `:5000`;
+} else {
+  BASE_URL = `https://` + window.location.hostname;
+}
 const YEAR = 2018;
 const S1 = 0.19146;
 const S2 = 0.34134;
