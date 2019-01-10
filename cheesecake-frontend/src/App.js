@@ -10,6 +10,8 @@ import {
   NavLink,
   ListGroup,
   ListGroupItem,
+  TabContent,
+  TabPane,
 //  Progress,
   Row,
   Table
@@ -27,7 +29,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 } else {
   BASE_URL = `https://` + window.location.hostname;
 }
-const YEAR = 2018;
+const YEAR = 2019;
 const S1 = 0.19146;
 const S2 = 0.34134;
 const S3 = 0.43319;
@@ -106,6 +108,46 @@ class EventList extends Component {
   }
 }
 
+class Simulation extends Component {
+  constructor() {
+    super();
+    this.state = {
+      data: {}
+    };
+  }
+
+  componentDidMount() {
+    fetch(BASE_URL + `/api/simulate/` + this.props.eventkey)
+      .then(results => {
+        return results.json();
+      }).then(data => {
+        this.setState({
+          data: data
+        });
+      });
+  }
+
+  render() {
+    return (
+      <Table>
+        <thead>
+          <tr><th>Team</th><th>Average wins</th></tr>
+        </thead>
+        <tbody>
+          {
+            Object.keys(this.state.data).map(
+              (key, index) => (
+                <tr key={index}><td>{key}</td><td>{this.state.data[key]["mean"]}</td></tr>
+              )
+            )
+        }
+        </tbody>
+      </Table>
+    );
+  }
+
+}
+
 class MatchTable extends Component {
   constructor() {
     super();
@@ -148,9 +190,9 @@ class MatchTable extends Component {
             {match.alliances.blue.team_keys.map((key) => (
               <td key={key}>{key.substring(3)}</td>
             ))}
-              <td style={{backgroundColor: predict_color(match.prediction)}}>{predict(match.prediction)}</td>
+              <td style={{backgroundColor: predict_color(match.predictions.EloScorePredictor)}}>{predict(match.predictions.EloScorePredictor)}</td>
               <td>{match.winning_alliance}</td>
-              <td>{predict(match.prediction).toLowerCase().includes(match.winning_alliance) || predict(match.prediction) === "Tossup" ? '' : 'x'}</td>
+              <td>{predict(match.predictions.EloScorePredictor).toLowerCase().includes(match.winning_alliance) || predict(match.predictions.EloScorePredictor) === "Tossup" ? '' : 'x'}</td>
             </tr>
           ))}
         </tbody>
@@ -159,12 +201,49 @@ class MatchTable extends Component {
   }
 }
 
-const Event = (key) => (
-  <div>
-    <h2>{key.match.params.key}</h2>
-    <MatchTable eventkey={key.match.params.key}/>
-  </div>
-);
+class Event extends Component {
+  constructor(props) {
+    super(props);
+
+    this.toggle = this.toggle.bind(this);
+    this.state = {
+      activeTab: '1'
+    };
+  }
+
+  toggle(tab) {
+    if (this.state.activeTab !== tab) {
+      this.setState({
+        activeTab: tab
+      });
+    }
+  }
+  render() {
+    return (
+      <div>
+        <h2>{this.props.match.params.key}</h2>
+        <Nav tabs>
+          <NavItem>
+            <NavLink
+              onClick={() => { this.toggle('1'); }}
+              >Simulation</NavLink>
+          </NavItem>
+          <NavItem onClick={() => { this.toggle('2'); }}>
+            <NavLink>Matches</NavLink>
+          </NavItem>
+        </Nav>
+        <TabContent activeTab={this.state.activeTab}>
+          <TabPane tabId="1">
+            <Simulation eventkey={this.props.match.params.key}/>
+          </TabPane>
+          <TabPane tabId="2">
+            <MatchTable eventkey={this.props.match.params.key}/>
+          </TabPane>
+        </TabContent>
+      </div>
+    );
+  }
+}
 
 class Home extends Component {
   constructor() {

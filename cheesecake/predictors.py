@@ -6,36 +6,23 @@ from scipy.stats import norm
 ## This is very much a work in progress!
 class Predictor(abc.ABC):
     def __init__(self):
-        self.prediction_history = {}
-        self.team_history = {}
+        pass
 
     def predict_match(self, match: Match) -> float:
         return 0.0
 
     def predict(self, match: Match) -> float:
         p = self.predict_match(match)
-        self.prediction_history[match.key] = p
         return p
 
+    def predict_keys(self, keys: list) -> float:
+        return 0.0
+
     def add_result(self, match: Match):
-        self.result_history[match.key] = match.result()
         return
 
     def current_values(self):
         return
-
-class TeamNumberPredictor(Predictor):
-    def predict_match(self, match: Match) -> float:
-        alliances = match.get_alliances()
-        blue = sum([x.team_number for x in alliances["blue"].team_keys])
-        red = sum([x.team_number for x in alliances["red"].team_keys])
-        return 1 - red / (red + blue)
-
-class RedPredictor(Predictor):
-    def predict_match(self, match: Match) -> float:
-        if match.comp_level == "qm":
-            return 0.5
-        return 0.75
 
 class EloPredictor(Predictor):
     def __init__(self):
@@ -50,6 +37,12 @@ class EloPredictor(Predictor):
 
     def _alliance_elo(self, alliance: Alliance) -> float:
         return sum([self._get_elo(t.key) for t in alliance.team_keys])
+
+    def predict_keys(self, keys: list) -> float:
+        #TODO: This assumes that it is used correctly.
+        red = sum([self._get_elo(x) for x in keys[0:3]])
+        blue = sum([self._get_elo(x) for x in keys[3:6]])
+        return 1 / (1 + 10 ** ((blue - red) / 400.0))
 
     def predict_match(self, match: Match) -> float:
         alliances = match.get_alliances()
@@ -95,6 +88,8 @@ class EloScorePredictor(EloPredictor):
                 "2016": 29.5,
                 "2017": 91.4,
                 "2018": 184.7,
+                # TODO: This is temporary.
+                "2019": 100.0,
             }, "playoffs": {
                 "2003": 50.9,
                 "2004": 45.6,
@@ -111,7 +106,9 @@ class EloScorePredictor(EloPredictor):
                 "2015": 33.2,
                 "2016": 27.5,
                 "2017": 70.6,
-                "2018": 106.9
+                "2018": 106.9,
+                # TODO: This is temporary.
+                "2019": 100.0,
             }
         }
         self.last_year = "2002"
@@ -143,11 +140,6 @@ class EloScorePredictor(EloPredictor):
         alliances = match.get_alliances()
         for team in alliances["red"].team_keys:
             self.elos[team.key] += change
-            if team.key not in self.team_history:
-                self.team_history[team.key] = []
-            self.team_history[team.key].append(self.elos[team.key])
         for team in alliances["blue"].team_keys:
             self.elos[team.key] -= change
-            if team.key not in self.team_history:
-                self.team_history[team.key] = []
-            self.team_history[team.key].append(self.elos[team.key])
+

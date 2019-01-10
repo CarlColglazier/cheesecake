@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify
 from sqlalchemy.orm import joinedload
 from functools import lru_cache
 import pickle
+import numpy as np
+import pandas as pd
 
 from ..models import *
 from ..predictors import *
@@ -43,8 +45,13 @@ def run_elo():
         matches = fetch_all_matches()
         predictor = EloScorePredictor()
         for match in matches:
-            predictor.predict(match)
+            p = predictor.predict(match)
+            history = PredictionHistory(match=match.key,
+                                    prediction=p,
+                                    model=type(predictor).__name__)
+            db.session.merge(history)
             predictor.add_result(match)
+        db.session.commit()
         filehandler = open("elo.pickle", 'wb')
         pickle.dump(predictor, filehandler)
         return predictor
@@ -80,13 +87,27 @@ def get_matches(event):
         Match.event_key == event
     ).options(
         joinedload('alliances')
+    ).options(
+        joinedload('predictions')
     ).order_by(
         Match.time,
         sort_order,
         Match.match_number
     ).all()
     series = [x.serialize for x in matches]
-    predictor = run_elo()
-    for s in series:
-        s["prediction"] = predictor.prediction_history[s["key"]]
     return jsonify(series)
+
+@api.route('simulate/<string:event>', methods=['GET'])
+def simulate_event(event):
+    teams = [x.key for x in Event.query.get(event).teams]
+    predictor = run_elo()
+    sample = np.random.choice(teams, size=(10000, 6))
+    predictions = [predictor.predict_keys(x) for x in sample]
+    reds = sample[:,0:3].flatten()
+    blues = sample[:,3:6].flatten()
+    pred_repeat = np.repeat(predictions, 3)
+    df = pd.DataFrame({
+        "teams": np.concatenate((reds, blues), axis=None),
+        "predictions": np.concatenate((pred_repeat, np.subtract(1.0, pred_repeat)))
+    })
+    return jsonify(df.groupby("teams").agg(['mean', 'std'])["predictions"].to_dict(orient='index'))

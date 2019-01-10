@@ -10,6 +10,15 @@ district_teams = db.Table('district_teams',
                                     db.ForeignKey('team.key'))
 )
 
+event_teams = db.Table('event_teams',
+                          db.Column('position', db.Integer,
+                                    primary_key=True),
+                          db.Column('event_key', db.String(10),
+                                    db.ForeignKey('event.key')),
+                          db.Column('team_key', db.String(8),
+                                    db.ForeignKey('team.key'))
+)
+
 class District(db.Model):
     abbreviation = db.Column(db.String(10))
     display_name = db.Column(db.String(100))
@@ -62,6 +71,12 @@ class Event(db.Model):
     year = db.Column(db.Integer)
     matches = db.relationship('Match', backref='matches', lazy=True)
     awards = db.relationship('Award', backref='awards', lazy=True)
+    teams = db.relationship(
+        'Team',
+        secondary=event_teams,
+        lazy='subquery',
+        order_by=event_teams.c.position,
+        backref=db.backref('events', lazy=True))
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -108,6 +123,7 @@ class Match(db.Model):
     set_number = db.Column(db.Integer)
     match_number = db.Column(db.Integer)
     alliances = db.relationship('Alliance', backref='match')
+    predictions = db.relationship('PredictionHistory', backref='pmatch')
     winning_alliance = db.Column(db.String(5))
     event_key = db.Column(db.String(25), db.ForeignKey('event.key'))
     time = db.Column(db.Integer)
@@ -134,13 +150,17 @@ class Match(db.Model):
         alliances = self.get_alliances()
         for key in alliances:
             alliances[key] = alliances[key].as_dict()
+        preds = {}
+        predictions = [x.serialize for x in self.predictions]
+        for p in predictions:
+            preds[p["model"]] = p["prediction"]
         return {
             "key": self.key,
             "comp_level": self.comp_level,
             "match_number": self.match_number,
             "winning_alliance": self.winning_alliance,
-            "alliances": alliances
-            #"alliances": [x.as_dict() for x in self.alliances]
+            "alliances": alliances,
+            "predictions": preds,
         }
 
 
@@ -212,4 +232,17 @@ class Team(db.Model):
         return {
             "key": self.key,
             "nickname": self.nickname
+        }
+
+class PredictionHistory(db.Model):
+    key = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    match = db.Column(db.String(25), db.ForeignKey('match.key'))
+    prediction = db.Column(db.Float)
+    model = db.Column(db.String(25))
+
+    @property
+    def serialize(self):
+        return {
+            "prediction": self.prediction,
+            "model": self.model,
         }

@@ -19,7 +19,7 @@ def get_teams():
     db.session.commit()
 
 def get_events():
-    for year in range(2003, CURRENT_YEAR):
+    for year in range(2003, CURRENT_YEAR + 1):
         events = tba.events(year)
         for i, event in enumerate(events):
             if event["event_type"] > 10:
@@ -80,6 +80,24 @@ def get_district_teams():
                 district.teams.append(team)
     db.session.commit()
 
+def get_event_teams():
+    events = Event.query.filter(
+        Event.event_type < 10
+    ).all()
+    for event in events:
+        event_teams = tba.event_teams(event.key, keys=True)
+        if type(event_teams) != list:
+            continue
+        for key in event_teams:
+            team = Team.query.get(key)
+            if team is None:
+                continue
+            if team not in event.teams:
+                event.teams.append(team)
+        print(event.key)
+        #print(event.teams)
+        db.session.commit()
+
 @app.cli.command()
 @click.argument('table')
 def sync(table):
@@ -98,6 +116,10 @@ def sync(table):
     if table == "district_teams" or table is None:
         print("Downloading district teams")
         get_district_teams()
+    if table == "event_teams" or table is None:
+        print("Downloading event teams")
+        get_event_teams()
+
 
 if __name__ == '__main__':
     socketio.init_app(app)
