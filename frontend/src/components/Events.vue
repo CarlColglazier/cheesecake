@@ -21,7 +21,7 @@ export default {
     }
   },
   mounted () {
-    fetch(`http://localhost:5000/api/events/2019`)
+    this.$http.get('events/2019')
       .then(data => {
         return data.json()
       }).then(data => {

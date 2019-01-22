@@ -28,7 +28,7 @@ export default {
     }
   },
   mounted () {
-    fetch(`http://localhost:5000/api/simulate/${this.$route.params.key}`)
+    this.$http.get(`simulate/${this.$route.params.key}`)
       .then(data => {
         return data.json()
       }).then(data => {
