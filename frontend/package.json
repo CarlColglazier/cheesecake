@@ -14,7 +14,6 @@
     "build": "node build/build.js"
   },
   "dependencies": {
-    "@vue/cli-service": "^3.3.1",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
   },
