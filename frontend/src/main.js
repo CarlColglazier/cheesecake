@@ -21,18 +21,18 @@ Vue.http.options.root = rootUrl
  * @param {String} value    The value string.
  * @param {Number} decimals The number of decimal places.
  */
-Vue.filter('round', function(value, decimals) {
-  if(!value) {
-    value = 0;
+Vue.filter('round', function (value, decimals) {
+  if (!value) {
+    value = 0
   }
 
-  if(!decimals) {
-    decimals = 0;
+  if (!decimals) {
+    decimals = 0
   }
 
-  value = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
-  return value;
-});
+  value = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals)
+  return value
+})
 
 /* eslint-disable no-new */
 new Vue({
