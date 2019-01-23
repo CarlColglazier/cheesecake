@@ -4,12 +4,12 @@
     <h2>{{ this.$route.params.key }}</h2>
     <table>
       <thead>
-        <tr><th>Team</th><th>Wins</th></tr>
+        <tr><th>Team</th><th>Win Rate</th></tr>
       </thead>
       <tbody>
-        <tr v-for="(sim, index) in simulation" :key="index">
-          <td>{{index}}</td>
-          <td>{{sim.mean}}</td>
+        <tr v-for="(sim, index) in simulation" :key="index" v-if="index < 8">
+          <td>{{sim.key}}</td>
+          <td class="right">{{sim.mean | round(2)}}</td>
         </tr>
       </tbody>
     </table>
@@ -37,3 +37,9 @@ export default {
   }
 }
 </script>
+
+<style>
+.right {
+  text-align: right;
+}
+</style>

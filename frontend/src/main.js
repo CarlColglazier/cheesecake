@@ -13,6 +13,27 @@ var rootUrl = (isProduction) ? 'https://cheesecake.live/api/' : 'http://localhos
 Vue.use(VueResource)
 Vue.http.options.root = rootUrl
 
+/**
+ * Vue filter to round the decimal to the given place.
+ * https://gist.github.com/belsrc/672b75d1f89a9a5c192c
+ * http://jsfiddle.net/bryan_k/3ova17y9/
+ *
+ * @param {String} value    The value string.
+ * @param {Number} decimals The number of decimal places.
+ */
+Vue.filter('round', function(value, decimals) {
+  if(!value) {
+    value = 0;
+  }
+
+  if(!decimals) {
+    decimals = 0;
+  }
+
+  value = Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  return value;
+});
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

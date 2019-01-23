@@ -81,6 +81,14 @@ class Event(db.Model):
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
+    @property
+    def serialize(self):
+        return {
+            "key": self.key,
+            "name": self.name,
+        }
+
+
 alliance_teams = db.Table('alliance_teams',
                           db.Column('position', db.Integer,
                                     primary_key=True,

@@ -79,7 +79,7 @@ def get_official_events_year(year):
         Event.start_date,
         Event.name
     ).all()
-    return jsonify([x.as_dict() for x in events])
+    return jsonify([x.serialize for x in events])
 
 @api.route('matches/<string:event>', methods=['GET'])
 def get_matches(event):
@@ -101,6 +101,7 @@ def get_matches(event):
 def simulate_event(event):
     teams = [x.key for x in Event.query.get(event).teams]
     predictor = run_elo()
+    np.random.seed(0)
     sample = np.random.choice(teams, size=(10000, 6))
     predictions = [predictor.predict_keys(x) for x in sample]
     reds = sample[:,0:3].flatten()
@@ -110,4 +111,12 @@ def simulate_event(event):
         "teams": np.concatenate((reds, blues), axis=None),
         "predictions": np.concatenate((pred_repeat, np.subtract(1.0, pred_repeat)))
     })
-    return jsonify(df.groupby("teams").agg(['mean', 'std'])["predictions"].to_dict(orient='index'))
+    dic = df.groupby("teams").mean().sort_values(by='predictions', ascending=False)
+    ## TODO: Surely there is a better way to do this.
+    values = []
+    for key, val in dic["predictions"].iteritems():
+        values.append({
+            'key': key,
+            'mean': val
+        })
+    return jsonify(values)
