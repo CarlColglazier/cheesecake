@@ -17,6 +17,7 @@ scipy = "*"
 uwsgi = "*"
 pandas = "*"
 numpy = "*"
+flask-caching = "*"
 
 [dev-packages]
 matplotlib = "*"

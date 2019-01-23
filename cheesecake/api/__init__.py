@@ -1,12 +1,12 @@
 from flask import Blueprint, jsonify
 from sqlalchemy.orm import joinedload
-from functools import lru_cache
 import pickle
 import numpy as np
 import pandas as pd
 
 from ..models import *
 from ..predictors import *
+from .. import cache
 
 api = Blueprint('api', __name__)
 
@@ -19,7 +19,7 @@ MATCH_ORDER = {
 }
 sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
-@lru_cache()
+@cache.cached(timeout=50, key_prefix='all_matches')
 def fetch_all_matches():
     return Match.query.join(Event).filter(
         Event.event_type < 10
@@ -32,7 +32,7 @@ def fetch_all_matches():
         Match.match_number
     ).all()
 
-@lru_cache()
+@cache.cached(timeout=50, key_prefix='run_elo')
 def run_elo():
     # This is kind of a hack, but I really don't want to keep
     # having to run this over and over again on each refresh,
@@ -68,6 +68,7 @@ def get_teams(page=1):
     return jsonify([x.serialize for x in teams.items])
 
 @api.route('events/<int:year>', methods=['GET'])
+@cache.cached(timeout=50)
 def get_official_events_year(year):
     events = Event.query.filter(
         Event.first_event_code != None
@@ -98,6 +99,7 @@ def get_matches(event):
     return jsonify(series)
 
 @api.route('simulate/<string:event>', methods=['GET'])
+@cache.cached(timeout=60)
 def simulate_event(event):
     teams = [x.key for x in Event.query.get(event).teams]
     predictor = run_elo()
