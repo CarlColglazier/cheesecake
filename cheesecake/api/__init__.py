@@ -8,6 +8,10 @@ from ..models import *
 from ..predictors import *
 from .. import cache
 
+MINUTE = 60
+HOUR = 3600
+DAY = 86400
+
 api = Blueprint('api', __name__)
 
 MATCH_ORDER = {
@@ -19,7 +23,7 @@ MATCH_ORDER = {
 }
 sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
-@cache.cached(timeout=50, key_prefix='all_matches')
+@cache.cached(timeout=MINUTE, key_prefix='all_matches')
 def fetch_all_matches():
     return Match.query.join(Event).filter(
         Event.event_type < 10
@@ -32,7 +36,7 @@ def fetch_all_matches():
         Match.match_number
     ).all()
 
-@cache.cached(timeout=50, key_prefix='run_elo')
+@cache.cached(timeout=MINUTE, key_prefix='run_elo')
 def run_elo():
     # This is kind of a hack, but I really don't want to keep
     # having to run this over and over again on each refresh,
@@ -57,6 +61,7 @@ def run_elo():
         return predictor
 
 @api.route('teams/<int:page>', methods=['GET'])
+@cache.cached(timeout=HOUR)
 def get_teams(page=1):
     per_page = 250
     teams = Team.query.order_by(
@@ -68,7 +73,7 @@ def get_teams(page=1):
     return jsonify([x.serialize for x in teams.items])
 
 @api.route('events/<int:year>', methods=['GET'])
-@cache.cached(timeout=50)
+@cache.cached(timeout=DAY)
 def get_official_events_year(year):
     events = Event.query.filter(
         Event.first_event_code != None
@@ -99,7 +104,7 @@ def get_matches(event):
     return jsonify(series)
 
 @api.route('simulate/<string:event>', methods=['GET'])
-@cache.cached(timeout=60)
+@cache.cached(timeout=MINUTE)
 def simulate_event(event):
     teams = [x.key for x in Event.query.get(event).teams]
     predictor = run_elo()
