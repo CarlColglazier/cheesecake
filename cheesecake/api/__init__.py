@@ -23,7 +23,7 @@ MATCH_ORDER = {
 }
 sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
-@cache.cached(timeout=MINUTE, key_prefix='all_matches')
+@cache.cached(timeout=DAY, key_prefix='all_matches')
 def fetch_all_matches():
     return Match.query.join(Event).filter(
         Event.event_type < 10
@@ -36,7 +36,7 @@ def fetch_all_matches():
         Match.match_number
     ).all()
 
-@cache.cached(timeout=MINUTE, key_prefix='run_elo')
+@cache.cached(timeout=DAY, key_prefix='run_elo')
 def run_elo():
     # This is kind of a hack, but I really don't want to keep
     # having to run this over and over again on each refresh,
