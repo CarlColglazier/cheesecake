@@ -1,10 +1,11 @@
-from cheesecake import create_app, db, socketio, tba
+from cheesecake import create_app, db, tba
 import click
 from flask import Flask
 from flask.cli import FlaskGroup
 from cheesecake.models import Team, Event, Match, District, Alliance
+import os
 
-CURRENT_YEAR = 2019
+CURRENT_YEAR = 2018
 
 app = create_app()
 
@@ -18,8 +19,8 @@ def get_teams():
             db.session.merge(Team(**team))
     db.session.commit()
 
-def get_events():
-    for year in range(2003, CURRENT_YEAR + 1):
+def get_events(min_year, max_year):
+    for year in range(min_year, max_year + 1):
         events = tba.events(year)
         for i, event in enumerate(events):
             if event["event_type"] > 10:
@@ -40,6 +41,8 @@ def get_matches():
     for i, event in enumerate(events):
         matches = tba.event_matches(event.key)
         for match in matches:
+            if int(match["time"]) > 1521997200:
+                continue
             if match["key"] not in existing_matches:
                 match["alliances"]["red"]["color"] = "red"
                 match["alliances"]["blue"]["color"] = "blue"
@@ -95,12 +98,17 @@ def get_event_teams():
             if team not in event.teams:
                 event.teams.append(team)
         print(event.key)
-        #print(event.teams)
         db.session.commit()
 
 @app.cli.command()
 @click.argument('table')
 def sync(table):
+    if "FLASK_ENV" in os.environ and os.environ["FLASK_ENV"] == "development":
+        min_year = 2016
+        max_year = 2018
+    else:
+        min_year = 2003
+        max_year = CURRENT_YEAR + 1
     if table == "teams" or table is None:
         print("Downloading Teams")
         get_teams()
@@ -109,7 +117,7 @@ def sync(table):
         get_districts()
     if table == "events" or table is None:
         print("Downloading Events")
-        get_events()
+        get_events(min_year, max_year)
     if table == "matches" or table is None:
         print("Downloading Matches")
         get_matches()
@@ -122,5 +130,6 @@ def sync(table):
 
 
 if __name__ == '__main__':
-    socketio.init_app(app)
-    socketio.run(app, host='0.0.0.0')
+    app.run()
+#    socketio.init_app(app)
+#    socketio.run(app, host='0.0.0.0')

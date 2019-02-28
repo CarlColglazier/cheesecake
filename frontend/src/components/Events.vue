@@ -1,11 +1,14 @@
 <template>
   <div>
     <Header/>
-    <li v-for="event in events" :key="event.key">
-      <router-link :to="`/event/${event.key}`">
-        <a>{{ event.name }}</a>
-      </router-link>
-    </li>
+    <h2>Upcoming Events</h2>
+    <ul class="menulist">
+      <li v-for="event in events" :key="event.key">
+        <router-link :to="`/event/${event.key}`">
+          <a>{{ event.name }}</a>
+        </router-link>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -21,7 +24,7 @@ export default {
     }
   },
   mounted () {
-    this.$http.get('events/2019')
+    this.$http.get('events/2018')
       .then(data => {
         return data.json()
       }).then(data => {
@@ -30,3 +33,13 @@ export default {
   }
 }
 </script>
+
+<style>
+ .menulist {
+     padding: 0;
+ }
+ .menulist li {
+     list-style-type: none;
+     margin: 1em .1em;
+ }
+</style>

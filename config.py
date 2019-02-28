@@ -16,6 +16,7 @@ class ProductionConfig(Config):
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
+    SQLALCHEMY_DATABASE_URI = DEV_DATABASE
 
 class TestingConfig(Config):
     TESTING = True

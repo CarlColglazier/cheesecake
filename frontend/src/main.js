@@ -34,6 +34,30 @@ Vue.filter('round', function (value, decimals) {
   return value
 })
 
+Vue.filter('prediction', function (fl) {
+  const S1 = 0.19146
+  const S2 = 0.34134
+  const S3 = 0.43319
+  if (typeof fl !== 'number') {
+    return '-'
+  }
+  if (fl < 0.5 - S3) {
+    return 'Likely Blue'
+  } else if (fl < 0.5 - S2) {
+    return 'Leans Blue'
+  } else if (fl < 0.5 - S1) {
+    return 'Tilts Blue'
+  } else if (fl <= 0.5 + S1) {
+    return 'Tossup'
+  } else if (fl <= 0.5 + S2) {
+    return 'Tilts Red'
+  } else if (fl <= 0.5 + S3) {
+    return 'Leans Red'
+  } else {
+    return 'Likely Red'
+  }
+})
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

@@ -3,9 +3,12 @@ from sqlalchemy.orm import joinedload
 import pickle
 import numpy as np
 import pandas as pd
+import os
 
 from ..models import *
 from ..predictors import *
+from ..states import EventState
+from ..simulation import *
 from .. import cache
 
 MINUTE = 60
@@ -25,7 +28,7 @@ sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
 @cache.memoize(timeout=DAY)
 def fetch_all_matches():
-    return Match.query.join(Event).filter(
+    matches =  Match.query.join(Event).filter(
         Event.event_type < 10
     ).options(
         joinedload('alliances')
@@ -35,6 +38,7 @@ def fetch_all_matches():
         sort_order,
         Match.match_number
     ).all()
+    return matches
 
 @cache.memoize(timeout=DAY)
 def run_elo():
@@ -103,27 +107,30 @@ def get_matches(event):
     series = [x.serialize for x in matches]
     return jsonify(series)
 
-@api.route('simulate/<string:event>', methods=['GET'])
-@cache.memoize(timeout=MINUTE)
 def simulate_event(event):
-    teams = [x.key for x in Event.query.get(event).teams]
+    event = Event.query.get(event)
+    state = event.state()
     predictor = run_elo()
-    np.random.seed(0)
-    sample = np.random.choice(teams, size=(10000, 6))
-    predictions = [predictor.predict_keys(x) for x in sample]
-    reds = sample[:,0:3].flatten()
-    blues = sample[:,3:6].flatten()
-    pred_repeat = np.repeat(predictions, 3)
-    df = pd.DataFrame({
-        "teams": np.concatenate((reds, blues), axis=None),
-        "predictions": np.concatenate((pred_repeat, np.subtract(1.0, pred_repeat)))
+    if state == EventState.NO_SCHEDULE:
+        simulator = PreEventSimulator(event, predictor)
+    else:
+        simulator = QualificationEventSimulator(event, predictor)
+    return simulator
+
+@api.route('simulate/<string:event>/matches', methods=['GET'])
+@cache.memoize(timeout=MINUTE)
+def simulate_event_endpoint(event):
+    simulator = simulate_event(event)
+    predictions = simulator.matches()
+    return jsonify([x[0].serialize for x in predictions])
+
+@api.route('event/<string:key>', methods=['GET'])
+@cache.memoize(timeout=MINUTE)
+def event(key):
+    event_data = Event.query.get(key)
+    simulator = simulate_event(key)
+    predictions = simulator.matches()
+    return jsonify({
+        "event": event_data.as_dict(),
+        "simulate": [x[0].serialize for x in predictions]
     })
-    dic = df.groupby("teams").mean().sort_values(by='predictions', ascending=False)
-    ## TODO: Surely there is a better way to do this.
-    values = []
-    for key, val in dic["predictions"].iteritems():
-        values.append({
-            'key': key,
-            'mean': val
-        })
-    return jsonify(values)

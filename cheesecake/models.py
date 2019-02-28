@@ -1,5 +1,6 @@
 from . import db
 from sqlalchemy.dialects.postgresql import JSON
+from .states import EventState
 
 district_teams = db.Table('district_teams',
                           db.Column('position', db.Integer,
@@ -77,6 +78,34 @@ class Event(db.Model):
         lazy='subquery',
         order_by=event_teams.c.position,
         backref=db.backref('events', lazy=True))
+
+    simulator = None
+
+    def state(self):
+        if len(self.matches) == 0:
+            return EventState.NO_SCHEDULE
+        completed = sum([x.winning_alliance is not None for x in self.matches if x.comp_level == "qm"])
+        if completed == 0:
+            return EventState.NOT_STARTED
+        if completed != len([x for x in self.matches if x.comp_level == "qm"]):
+            return EventState.QUALIFICATIONS
+        completed_playoffs = sum([x.winning_alliance is not None for x in self.matches if x.comp_level != "qm"])
+        if completed_playoffs == 0:
+            return EventState.ALLIANCE_SELECTION
+        if completed_playoffs != len([x for x in self.matches if x.comp_level != "qm"]):
+            return EventState.PLAYOFFS
+        return EventState.COMPLETE
+
+    """
+    def simulate(self):
+        if self.simulator is None:
+            state = self.state()
+            if state == EventState.NO_SCHEDULE:
+                self.simulator = PreEventSimulator()
+            else:
+                self.simulator = QualificationEventSimulator()
+        return self.simulator.matches(self)
+    """
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

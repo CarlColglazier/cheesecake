@@ -1,7 +1,9 @@
 <template>
   <div>
     <Header/>
-    <p>Home</p>
+    <h2>What is Cheesecake Live?</h2>
+    <p>Cheesecake is a prediction model and analytics program for the <em>FIRST</em> Robotics Competition.</p>
+    <p>Cheesecake takes an empirical, evidence-based approach to how it handles FRC data.</p>
   </div>
 </template>
 
