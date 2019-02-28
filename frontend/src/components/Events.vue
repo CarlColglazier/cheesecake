@@ -24,7 +24,7 @@ export default {
     }
   },
   mounted () {
-    this.$http.get('events/2018')
+    this.$http.get('events/upcoming')
       .then(data => {
         return data.json()
       }).then(data => {
