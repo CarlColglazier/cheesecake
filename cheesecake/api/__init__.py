@@ -1,8 +1,9 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import joinedload
 import pickle
 import numpy as np
 import pandas as pd
+import json
 import os
 import datetime
 
@@ -10,6 +11,7 @@ from ..models import *
 from ..predictors import *
 from ..states import EventState
 from ..simulation import *
+from ..utils import update_schedule, update_match
 from .. import cache
 
 MINUTE = 60
@@ -27,7 +29,7 @@ MATCH_ORDER = {
 }
 sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
-@cache.memoize(timeout=DAY)
+@cache.memoize(timeout=MINUTE)
 def fetch_all_matches():
     matches =  Match.query.join(Event).filter(
         Event.event_type < 10
@@ -41,7 +43,41 @@ def fetch_all_matches():
     ).all()
     return matches
 
-@cache.memoize(timeout=DAY)
+@cache.memoize(timeout=MINUTE)
+def fetch_year_matches(year):
+     matches =  Match.query.join(Event).filter(
+        Event.event_type < 10
+     ).filter(
+         Event.year == year
+     ).options(
+         joinedload('alliances')
+     ).order_by(
+         Event.start_date,
+         Match.time,
+         sort_order,
+         Match.match_number
+     ).all()
+     return matches
+    
+
+def predict():
+    matches = fetch_year_matches(2019)
+    filehandler = open("elo.json", 'r')
+    elos = json.load(filehandler)
+    print(elos)
+    predictor = EloScorePredictor()
+    predictor.elos = elos
+    for match in matches:
+        p = predictor.predict(match)
+        history = PredictionHistory(match=match.key,
+                                    prediction=p,
+                                    model=type(predictor).__name__)
+        db.session.merge(history)
+        if sum([x.score for x in match.alliances]) != -2:
+            predictor.add_result(match)
+    db.session.commit()
+
+@cache.memoize(timeout=10 * MINUTE)
 def run_elo():
     # This is kind of a hack, but I really don't want to keep
     # having to run this over and over again on each refresh,
@@ -65,6 +101,25 @@ def run_elo():
         pickle.dump(predictor, filehandler)
         return predictor
 
+@api.route('/', methods=['POST'])
+def webhook():
+    data = json.loads(request.data)
+    if data["message_type"] == "schedule_updated":
+        update_schedule(data["message_data"]["event_key"])
+        predict()
+    if data["message_type"] == "match_score":
+        update_match(data["message_data"]["match"])
+        predict()
+    if data["message_type"] == "verification":
+        print(data)
+    return jsonify([])
+
+@api.route('/', methods=['GET'])
+def test():
+    predict()
+    return jsonify([])
+    
+    
 @api.route('teams/<int:page>', methods=['GET'])
 @cache.memoize(timeout=HOUR)
 def get_teams(page=1):
@@ -134,6 +189,7 @@ def get_matches(event):
     series = [x.serialize for x in matches]
     return jsonify(series)
 
+"""
 def simulate_event(event):
     event = Event.query.get(event)
     state = event.state()
@@ -143,6 +199,7 @@ def simulate_event(event):
     else:
         simulator = QualificationEventSimulator(event, predictor)
     return simulator
+
 
 @api.route('simulate/<string:event>/matches', methods=['GET'])
 @cache.memoize(timeout=MINUTE)
@@ -161,3 +218,4 @@ def event(key):
         "event": event_data.as_dict(),
         "simulate": [x[0].serialize for x in predictions]
     })
+"""

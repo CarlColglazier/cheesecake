@@ -16,7 +16,7 @@ db = SQLAlchemy(session_options={
     "autocommit": False,
     "expire_on_commit": False
 })
-#socketio = SocketIO()
+
 cache = Cache(config={'CACHE_TYPE': 'simple'})
 
 # Other
@@ -24,9 +24,6 @@ tba = tbapy.TBA(TBA_KEY)
 
 # Import models
 from . import models
-
-# Import socket events.
-#from . import events
 
 def create_app():
     print("Creating app...")

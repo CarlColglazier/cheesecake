@@ -39,37 +39,7 @@ def get_matches():
     events = Event.query.all()
     existing_matches = set(x[0] for x in Match.query.with_entities(Match.key).all())
     for i, event in enumerate(events):
-        matches = tba.event_matches(event.key)
-        for match in matches:
-            if int(match["time"]) > 1521997200:
-                continue
-            if match["key"] not in existing_matches:
-                match["alliances"]["red"]["color"] = "red"
-                match["alliances"]["blue"]["color"] = "blue"
-                match["alliances"]["red"]["match_key"] = match["key"]
-                match["alliances"]["blue"]["match_key"] = match["key"]
-                match["alliances"]["red"]["key"] = match["key"] + "_red"
-                match["alliances"]["blue"]["key"] = match["key"] + "_blue"
-                red_teams = match["alliances"]["red"]["team_keys"]
-                blue_teams = match["alliances"]["blue"]["team_keys"]
-                del match["alliances"]["red"]["team_keys"]
-                del match["alliances"]["blue"]["team_keys"]
-                red = Alliance(**match["alliances"]["red"])
-                blue = Alliance(**match["alliances"]["blue"])
-                for team in red_teams:
-                    t = Team.query.get(team)
-                    if t:
-                        red.team_keys.append(t)
-                for team in blue_teams:
-                    t = Team.query.get(team)
-                    if t:
-                        blue.team_keys.append(t)
-                del match["alliances"]
-                db.session.add(Match(**match))
-                db.session.add(red)
-                db.session.add(blue)
-        print(event.key)
-        db.session.commit()
+        update_schedule(event)
 
 def get_district_teams():
     districts = District.query.with_entities(District).all()
