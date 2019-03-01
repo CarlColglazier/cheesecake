@@ -3,7 +3,6 @@ from .models import Team, Event, Match, District, Alliance
 
 # This function is huge and needs to be broken up.
 def update_match(match):
-    print(match.keys())
     match["alliances"]["red"]["color"] = "red"
     match["alliances"]["blue"]["color"] = "blue"
     match["alliances"]["red"]["match_key"] = match["key"]
@@ -51,11 +50,11 @@ def update_match(match):
         cname = c.name
         if "time" not in cname:
             setattr(m, cname, match[cname])
-    db.session.merge(m)
+    db.session.merge(m)    
     db.session.commit()
 
 def update_schedule(event):
-    events = Event.query.all()
+    print(event)
     matches = tba.event_matches(event)
     for match in matches:
         update_match(match)

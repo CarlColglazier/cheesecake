@@ -3,6 +3,7 @@ import click
 from flask import Flask
 from flask.cli import FlaskGroup
 from cheesecake.models import Team, Event, Match, District, Alliance
+from cheesecake.utils import update_schedule
 import os
 
 CURRENT_YEAR = 2018
@@ -37,9 +38,8 @@ def get_districts():
 
 def get_matches():
     events = Event.query.all()
-    existing_matches = set(x[0] for x in Match.query.with_entities(Match.key).all())
-    for i, event in enumerate(events):
-        update_schedule(event)
+    for event in events:
+        update_schedule(event.key)
 
 def get_district_teams():
     districts = District.query.with_entities(District).all()
