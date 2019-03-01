@@ -31,8 +31,10 @@ def update_match(match):
     blue = Alliance.query.get(match["alliances"]["blue"]["key"])
     if red is None:
         red = Alliance(**match["alliances"]["red"])
+        db.session.merge(red)
     if blue is None:
         blue = Alliance(**match["alliances"]["blue"])
+        db.session.merge(blue)
     for team in red_teams:
         t = Team.query.get(team)
         if t and t not in red.team_keys:
@@ -50,8 +52,6 @@ def update_match(match):
         if "time" not in cname:
             setattr(m, cname, match[cname])
     db.session.merge(m)
-    db.session.merge(red)
-    db.session.merge(blue)
     db.session.commit()
 
 def update_schedule(event):
