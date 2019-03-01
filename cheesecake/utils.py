@@ -30,10 +30,10 @@ def update_match(match):
     blue = Alliance.query.get(match["alliances"]["blue"]["key"])
     if red is None:
         red = Alliance(**match["alliances"]["red"])
-        db.session.merge(red)
+        #db.session.add(red)
     if blue is None:
         blue = Alliance(**match["alliances"]["blue"])
-        db.session.merge(blue)
+        #db.session.merge(blue)
     for team in red_teams:
         t = Team.query.get(team)
         if t and t not in red.team_keys:
