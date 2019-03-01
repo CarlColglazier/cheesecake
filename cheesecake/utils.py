@@ -54,7 +54,6 @@ def update_match(match):
     db.session.commit()
 
 def update_schedule(event):
-    print(event)
     matches = tba.event_matches(event)
     for match in matches:
         update_match(match)

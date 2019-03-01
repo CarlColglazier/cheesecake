@@ -64,7 +64,6 @@ def predict():
     matches = fetch_year_matches(2019)
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
-    print(elos)
     predictor = EloScorePredictor()
     predictor.elos = elos
     for match in matches:
@@ -150,7 +149,6 @@ def get_official_events_upcoming():
         Event.start_date,
         Event.name
     ).all()
-    print(str(t), str(d))
     return jsonify([x.serialize for x in events])
 
 
