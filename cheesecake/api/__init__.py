@@ -168,6 +168,7 @@ def get_official_events_year(year):
     return jsonify([x.serialize for x in events])
 
 @api.route('matches/<string:event>', methods=['GET'])
+@cache.memoize(timeout=2 * MINUTE)
 def get_matches(event):
     if Event.query.get(event) is None:
         resp = jsonify([])
