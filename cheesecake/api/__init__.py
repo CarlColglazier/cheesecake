@@ -177,9 +177,9 @@ def get_matches(event):
     matches = Match.query.filter(
         Match.event_key == event
     ).options(
-        joinedload('alliances')
+        joinedload(Match.alliances)
     ).options(
-        joinedload('predictions')
+        joinedload(Match.predictions)
     ).order_by(
         Match.time,
         sort_order,
