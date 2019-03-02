@@ -69,9 +69,9 @@ def predict():
     for match in matches:
         p = predictor.predict(match)
         history = PredictionHistory.query.filter(
-            match == match.key
+            PredictionHistory.match == match.key
         ).filter(
-            model == type(predictor).__name__
+            PredictionHistory.model == type(predictor).__name__
         ).first()
         if not history:
             history = PredictionHistory(match=match.key,
