@@ -68,10 +68,17 @@ def predict():
     predictor.elos = elos
     for match in matches:
         p = predictor.predict(match)
-        history = PredictionHistory(match=match.key,
-                                    prediction=p,
-                                    model=type(predictor).__name__)
-        db.session.merge(history)
+        history = PredictionHistory.query.filter(
+            match == match.key
+        ).filter(
+            model == type(predictor).__name__
+        ).first()
+        if not history:
+            history = PredictionHistory(match=match.key,
+                                        prediction=p,
+                                        model=type(predictor).__name__)
+        history.prediction = p
+        db.session.add(history)
         if sum([x.score for x in match.alliances]) != -2:
             predictor.add_result(match)
     db.session.commit()
