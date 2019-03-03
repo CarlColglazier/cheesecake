@@ -59,7 +59,7 @@ def fetch_year_matches(year):
      ).all()
      return matches
     
-
+@cache.memoize(timeout=MINUTE)
 def predict():
     matches = fetch_year_matches(2019)
     filehandler = open("elo.json", 'r')
