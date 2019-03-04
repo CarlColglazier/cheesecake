@@ -89,7 +89,7 @@ class EloScorePredictor(EloPredictor):
                 "2017": 91.4,
                 "2018": 184.7,
                 # TODO: This is temporary.
-                "2019": 20.0,
+                "2019": 21.1,
             }, "playoffs": {
                 "2003": 50.9,
                 "2004": 45.6,
@@ -108,7 +108,7 @@ class EloScorePredictor(EloPredictor):
                 "2017": 70.6,
                 "2018": 106.9,
                 # TODO: This is temporary.
-                "2019": 20.0,
+                "2019": 18.8,
             }
         }
         self.last_year = "2002"
