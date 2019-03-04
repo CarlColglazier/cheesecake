@@ -15,7 +15,7 @@ api = Blueprint('api', __name__)
 
 @cache.memoize(timeout=MINUTE)
 def predict():
-    matches = fetch_year_matches(2019)
+    matches = fetch_matches(2019)
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
     predictor = EloScorePredictor()
@@ -95,3 +95,13 @@ def get_matches(event):
     ).all()
     series = [x.serialize for x in matches]
     return jsonify(series)
+
+@api.route('verify/brier/<int:year>', methods=['GET'])
+@cache.memoize(timeout=10 * MINUTE)
+def brier(year):
+    matches = fetch_matches(year)
+    completed = [x for x in matches if x.result() is not None]
+    score = [(x.predictions[0].prediction - x.result()) ** 2 for x in completed]
+    return jsonify({
+        "brier": sum(score) / len(score)
+    })

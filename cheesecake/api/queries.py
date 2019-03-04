@@ -23,7 +23,8 @@ def fetch_matches(year=None):
             Event.year == year
         )
     matches = matches.options(
-        joinedload('alliances')
+        joinedload('alliances'),
+        joinedload('predictions')
     ).order_by(
         Event.start_date,
         Match.time,
