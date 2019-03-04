@@ -83,30 +83,6 @@ def predict():
             predictor.add_result(match)
     db.session.commit()
 
-@cache.memoize(timeout=10 * MINUTE)
-def run_elo():
-    # This is kind of a hack, but I really don't want to keep
-    # having to run this over and over again on each refresh,
-    # so I'm going to just load it from a file.
-    try:
-        filehandler = open("elo.pickle", 'rb')
-        predictor = pickle.load(filehandler)
-        return predictor
-    except:
-        matches = fetch_all_matches()
-        predictor = EloScorePredictor()
-        for match in matches:
-            p = predictor.predict(match)
-            history = PredictionHistory(match=match.key,
-                                    prediction=p,
-                                    model=type(predictor).__name__)
-            db.session.merge(history)
-            predictor.add_result(match)
-        db.session.commit()
-        filehandler = open("elo.pickle", 'wb')
-        pickle.dump(predictor, filehandler)
-        return predictor
-
 @api.route('/', methods=['POST'])
 def webhook():
     data = json.loads(request.data)
@@ -195,33 +171,3 @@ def get_matches(event):
     series = [x.serialize for x in matches]
     return jsonify(series)
 
-"""
-def simulate_event(event):
-    event = Event.query.get(event)
-    state = event.state()
-    predictor = run_elo()
-    if state == EventState.NO_SCHEDULE:
-        simulator = PreEventSimulator(event, predictor)
-    else:
-        simulator = QualificationEventSimulator(event, predictor)
-    return simulator
-
-
-@api.route('simulate/<string:event>/matches', methods=['GET'])
-@cache.memoize(timeout=MINUTE)
-def simulate_event_endpoint(event):
-    simulator = simulate_event(event)
-    predictions = simulator.matches()
-    return jsonify([x[0].serialize for x in predictions])
-
-@api.route('event/<string:key>', methods=['GET'])
-@cache.memoize(timeout=MINUTE)
-def event(key):
-    event_data = Event.query.get(key)
-    simulator = simulate_event(key)
-    predictions = simulator.matches()
-    return jsonify({
-        "event": event_data.as_dict(),
-        "simulate": [x[0].serialize for x in predictions]
-    })
-"""
