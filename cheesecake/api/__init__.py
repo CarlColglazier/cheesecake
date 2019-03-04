@@ -1,64 +1,18 @@
 from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import joinedload
-import pickle
-import numpy as np
-import pandas as pd
 import json
 import os
 import datetime
 
 from ..models import *
 from ..predictors import *
-from ..states import EventState
-from ..simulation import *
 from ..utils import update_schedule, update_match
 from .. import cache
-
-MINUTE = 60
-HOUR = 3600
-DAY = 86400
+from .queries import fetch_matches, sort_order
+from .times import *
 
 api = Blueprint('api', __name__)
 
-MATCH_ORDER = {
-    "qm": 0,
-    "ef": 10,
-    "qf": 11,
-    "sf": 12,
-    "f": 13
-}
-sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
-
-@cache.memoize(timeout=MINUTE)
-def fetch_all_matches():
-    matches =  Match.query.join(Event).filter(
-        Event.event_type < 10
-    ).options(
-        joinedload('alliances')
-    ).order_by(
-        Event.start_date,
-        Match.time,
-        sort_order,
-        Match.match_number
-    ).all()
-    return matches
-
-@cache.memoize(timeout=MINUTE)
-def fetch_year_matches(year):
-     matches =  Match.query.join(Event).filter(
-        Event.event_type < 10
-     ).filter(
-         Event.year == year
-     ).options(
-         joinedload('alliances')
-     ).order_by(
-         Event.start_date,
-         Match.time,
-         sort_order,
-         Match.match_number
-     ).all()
-     return matches
-    
 @cache.memoize(timeout=MINUTE)
 def predict():
     matches = fetch_year_matches(2019)
@@ -101,19 +55,6 @@ def test():
     predict()
     return jsonify([])
     
-    
-@api.route('teams/<int:page>', methods=['GET'])
-@cache.memoize(timeout=HOUR)
-def get_teams(page=1):
-    per_page = 250
-    teams = Team.query.order_by(
-        Team.team_number.desc()
-    ).paginate(
-        page,
-        per_page,
-        error_out=False)
-    return jsonify([x.serialize for x in teams.items])
-
 @api.route('events/upcoming', methods=['GET'])
 def get_official_events_upcoming():
     d = datetime.date.today()
@@ -128,22 +69,6 @@ def get_official_events_upcoming():
         Event.end_date >= str(t)
     ).filter(
         Event.end_date <= str(d)
-    ).order_by(
-        Event.start_date,
-        Event.name
-    ).all()
-    return jsonify([x.serialize for x in events])
-
-
-@api.route('events/<int:year>', methods=['GET'])
-@cache.memoize(timeout=DAY)
-def get_official_events_year(year):
-    events = Event.query.filter(
-        Event.first_event_code != None
-    ).filter(
-        Event.year == year
-    ).filter(
-        Event.event_type < 99
     ).order_by(
         Event.start_date,
         Event.name
@@ -170,4 +95,3 @@ def get_matches(event):
     ).all()
     series = [x.serialize for x in matches]
     return jsonify(series)
-

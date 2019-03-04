@@ -1,6 +1,6 @@
-from . import db
+from .. import db
 from sqlalchemy.dialects.postgresql import JSON
-from .states import EventState
+from ..states import EventState
 
 district_teams = db.Table('district_teams',
                           db.Column('position', db.Integer,
@@ -12,12 +12,12 @@ district_teams = db.Table('district_teams',
 )
 
 event_teams = db.Table('event_teams',
-                          db.Column('position', db.Integer,
-                                    primary_key=True),
-                          db.Column('event_key', db.String(10),
-                                    db.ForeignKey('event.key')),
-                          db.Column('team_key', db.String(8),
-                                    db.ForeignKey('team.key'))
+                       db.Column('position', db.Integer,
+                                 primary_key=True),
+                       db.Column('event_key', db.String(10),
+                                 db.ForeignKey('event.key')),
+                       db.Column('team_key', db.String(8),
+                                 db.ForeignKey('team.key'))
 )
 
 class District(db.Model):
