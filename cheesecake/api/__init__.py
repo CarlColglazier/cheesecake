@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload
 import json
 import os
 import datetime
+import numpy as np
 
 from ..models import *
 from ..predictors import *
@@ -97,7 +98,7 @@ def get_matches(event):
     return jsonify(series)
 
 @api.route('verify/brier/<int:year>', methods=['GET'])
-@cache.memoize(timeout=10 * MINUTE)
+@cache.memoize(timeout=MINUTE)
 def brier(year):
     matches = fetch_matches(year)
     completed = [x for x in matches if x.result() is not None]
@@ -105,3 +106,30 @@ def brier(year):
     return jsonify({
         "brier": sum(score) / len(score)
     })
+
+@api.route('verify/calibration/<int:year>', methods=['GET'])
+def calibration(year):
+    matches = fetch_matches(year)
+    completed = [x for x in matches if x.result() is not None]
+    m = []
+    for match in completed:
+        m.append({
+            "winner": match.result(),
+            "prediction": match.predictions[0].prediction
+        })
+    results = {}
+    for i in np.arange(0, 1, .1):
+        correct = 0
+        total = 0
+        for match in m:
+            if match["prediction"] >= i and match["prediction"] < i + .1:
+                total += 1
+                if match["winner"] == 1:
+                    correct += 1
+        results[i] = {
+            "correct": correct,
+            "total": total,
+            "fraction": float(correct) / total
+        }
+    return jsonify(results)
+        
