@@ -24,7 +24,11 @@
           <td>{{match.comp_level}}{{match.match_number}}</td>
           <td class="red right">{{match.alliances.red.score}}</td>
           <td class="blue right">{{match.alliances.blue.score}}</td>
-          <td class="center">{{match.predictions.EloScorePredictor | prediction() }}</td>
+          <td class="center" :class="{
+                      strike: (match.predictions.EloScorePredictor < 0.5 && match.winning_alliance =='red') || (match.predictions.EloScorePredictor > 0.5 && match.winning_alliance =='blue')
+              }">
+            {{match.predictions.EloScorePredictor | round(2) }}
+          </td>
         </tr>
         </tbody>
       </table>
@@ -33,19 +37,6 @@
         Please check back later.
       </p>
     </div>
-    <!--
-    <table>
-      <thead>
-        <tr><th>Team</th><th>Win Rate</th></tr>
-      </thead>
-      <tbody>
-        <tr v-for="(sim, index) in simulate" :key="index" v-if="index < 8">
-          <td>{{sim.key}}</td>
-          <td class="right">{{sim.mean | round(2)}}</td>
-        </tr>
-      </tbody>
-    </table>
-    -->
   </div>
 </template>
 
@@ -67,15 +58,6 @@ export default {
     }
   },
   mounted () {
-    /*
-    this.$http.get(`event/${this.$route.params.key}`)
-      .then(data => {
-        return data.json()
-      }).then(data => {
-        this.event = data.event
-        this.simulate = data.simulate
-      })
-    */
     this.$http.get(`matches/${this.$route.params.key}`)
       .then(data => {
         return data.json()
@@ -102,7 +84,29 @@ export default {
      background-color: #EEF;
  }
  th, td {
-     min-width: 5em;
+     min-width: 3em;
      padding: .5em;
  }
+
+ progress {
+     background: #CCF;
+ }
+
+ progress[value] {
+     /* Reset the default appearance */
+     -webkit-appearance: none;
+     -moz-appearance: none;
+     appearance: none;
+     border: none;
+ }
+
+ progress::-moz-progress-bar {
+     color: red;
+ }
+ progress::after { content: attr(value); }
+
+ .strike {
+     text-decoration: line-through;
+ }
+
 </style>

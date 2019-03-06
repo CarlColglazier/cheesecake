@@ -97,8 +97,9 @@ def get_matches(event):
     series = [x.serialize for x in matches]
     return jsonify(series)
 
+
+#@cache.memoize(timeout=MINUTE)
 @api.route('verify/brier/<int:year>', methods=['GET'])
-@cache.memoize(timeout=MINUTE)
 def brier(year):
     matches = fetch_matches(year)
     completed = [x for x in matches if x.result() is not None]
