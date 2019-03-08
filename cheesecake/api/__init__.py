@@ -14,22 +14,23 @@ from .times import *
 
 api = Blueprint('api', __name__)
 
-predictor = EloScorePredictor()
+elo_predictor = EloScorePredictor()
 
 @cache.memoize(timeout=MINUTE)
 def predict():
+    global elo_predictor
     matches = fetch_matches(2019)
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
+    predictor = EloScorePredictor()
     predictor.elos = elos
-    print(len(matches))
     for match in matches:
         p = predictor.predict(match)
-        history = PredictionHistory.query.filter(
-            PredictionHistory.match == match.key
-        ).filter(
-            PredictionHistory.model == type(predictor).__name__
-        ).first()
+        history = [x for x in match.predictions if x.model == type(predictor).__name__]
+        if len(history) > 0:
+            history = history[0]
+        else:
+            history = None
         if not history:
             history = PredictionHistory(match=match.key,
                                         prediction=p,
@@ -39,6 +40,7 @@ def predict():
         if sum([x.score for x in match.alliances]) != -2:
             predictor.add_result(match)
     db.session.commit()
+    elo_predictor = predictor
 
 @api.route('/', methods=['POST'])
 def webhook():
@@ -137,9 +139,11 @@ def calibration(year):
         
 @api.route('/teams/rankings', methods=['GET'])
 def rankings():
+    if not elo_predictor:
+        return jsonify([])
     return jsonify(
         sorted(
-            predictor.elos.items(),
+            elo_predictor.elos.items(),
             key=lambda x: x[1],
             reverse=True
         )[0:25]
