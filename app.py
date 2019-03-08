@@ -90,7 +90,6 @@ def deepsync_schedule():
             update_schedule(event.key)
         except:
             print("Error")
-    return jsonify([])
 
 @app.cli.command()
 @click.argument('table')
