@@ -61,6 +61,7 @@ def test():
     return jsonify([])
     
 @api.route('events/upcoming', methods=['GET'])
+@cache.memoize(timeout=2 * HOUR)
 def get_official_events_upcoming():
     d = datetime.date.today()
     t = datetime.date.today()
