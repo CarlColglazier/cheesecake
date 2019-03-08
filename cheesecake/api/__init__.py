@@ -14,13 +14,15 @@ from .times import *
 
 api = Blueprint('api', __name__)
 
+predictor = EloScorePredictor()
+
 @cache.memoize(timeout=MINUTE)
 def predict():
     matches = fetch_matches(2019)
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
-    predictor = EloScorePredictor()
     predictor.elos = elos
+    print(len(matches))
     for match in matches:
         p = predictor.predict(match)
         history = PredictionHistory.query.filter(
@@ -97,9 +99,8 @@ def get_matches(event):
     series = [x.serialize for x in matches]
     return jsonify(series)
 
-
-#@cache.memoize(timeout=MINUTE)
 @api.route('verify/brier/<int:year>', methods=['GET'])
+@cache.memoize(timeout=MINUTE)
 def brier(year):
     matches = fetch_matches(year)
     completed = [x for x in matches if x.result() is not None]
@@ -134,3 +135,13 @@ def calibration(year):
         }
     return jsonify(results)
         
+@api.route('/teams/rankings', methods=['GET'])
+def rankings():
+    return jsonify(
+        sorted(
+            predictor.elos.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[0:25]
+    )
+    #@return jsonify(predictor.elos)

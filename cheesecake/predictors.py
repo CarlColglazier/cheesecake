@@ -117,7 +117,7 @@ class EloScorePredictor(EloPredictor):
         # TODO: Consider using different values for different years.
         for key, value in self.elos.items():
             #self.elos[key] = 0.9 * value + 0.1 * 150
-            self.elos[key] = 0.5 * value + 0.5 * 150
+            self.elos[key] = 0.5 * value + 0.1 * 150
 
     def _elo_diff(self, match: Match):
         alliances = match.get_alliances()

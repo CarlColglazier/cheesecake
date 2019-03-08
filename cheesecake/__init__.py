@@ -2,7 +2,6 @@ from flask import Flask
 from flask_caching import Cache
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-#from flask_socketio import SocketIO, emit
 from flask_migrate import Migrate
 from secret import *
 import tbapy
