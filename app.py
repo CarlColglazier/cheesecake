@@ -5,6 +5,7 @@ from flask.cli import FlaskGroup
 from cheesecake.models import Team, Event, Match, District, Alliance
 from cheesecake.utils import update_schedule
 import os
+import datetime
 
 CURRENT_YEAR = 2018
 
@@ -70,6 +71,27 @@ def get_event_teams():
         print(event.key)
         db.session.commit()
 
+def deepsync_schedule():
+    d = datetime.date.today()
+    print(d.year)
+    events = Event.query.filter(
+        Event.first_event_code != None
+    ).filter(
+        Event.event_type < 99
+    ).filter(
+        Event.year == d.year
+    ).order_by(
+        Event.start_date,
+        Event.name
+    ).all()
+    for event in events:
+        print(event.key)
+        try:
+            update_schedule(event.key)
+        except:
+            print("Error")
+    return jsonify([])
+
 @app.cli.command()
 @click.argument('table')
 def sync(table):
@@ -97,7 +119,9 @@ def sync(table):
     if table == "event_teams" or table is None:
         print("Downloading event teams")
         get_event_teams()
-
+    if table == "schedule":
+        print("Deep sync current year schedule")
+        deepsync_schedule()
 
 if __name__ == '__main__':
     app.run()

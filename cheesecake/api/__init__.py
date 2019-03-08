@@ -148,27 +148,3 @@ def rankings():
             reverse=True
         )[0:25]
     )
-
-@cache.memoize(timeout=MINUTE)
-@api.route('/tasks/sync', methods=['GET'])
-def sync_all():
-    d = datetime.date.today()
-    print(d.year)
-    events = Event.query.filter(
-        Event.first_event_code != None
-    ).filter(
-        Event.event_type < 99
-    ).filter(
-        Event.year == d.year
-    ).order_by(
-        Event.start_date,
-        Event.name
-    ).all()
-    for event in events:
-        try:
-            update_schedule(event.key)
-        except:
-            print(event.key)
-    return jsonify([])
-
-    
