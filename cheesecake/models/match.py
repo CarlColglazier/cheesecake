@@ -23,6 +23,12 @@ class Match(db.Model):
         d["alliances"] = [x.as_dict() for x in self.alliances]
         return d
 
+    def get_prediction(self, model):
+        for prediction in self.predictions:
+            if prediction.model == model:
+                return prediction
+        return None
+
     def get_alliances(self):
         alliances = {}
         for alliance in self.alliances:

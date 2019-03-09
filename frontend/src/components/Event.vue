@@ -37,6 +37,17 @@
         Please check back later.
       </p>
     </div>
+    <div>
+      <h3>Rankings (Predicted)</h3>
+      <table>
+        <thead><tr><th>Rank</th><th>Team</th><th>Est. Rank Points</th></tr></thead>
+        <tbody>
+          <tr v-for="(key, index) in orderedrank" :key="key">
+            <td>{{index + 1}}</td><td>{{key[0]}}</td><td class="right">{{key[1] | round(1) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -49,12 +60,24 @@ export default {
   components: { Header, Error },
   data () {
     return {
-      matches: []
+      matches: [],
+      rankings: {}
     }
   },
   computed: {
     tbahref () {
       return `https://www.thebluealliance.com/event/${this.$route.params.key}`
+    },
+    orderedrank () {
+      // https://stackoverflow.com/questions/25500316/sort-a-dictionary-by-value-in-javascript
+      var dict = this.rankings
+      var items = Object.keys(dict).map(function (key) {
+        return [key, dict[key]]
+      })
+      items.sort(function (first, second) {
+        return second[1] - first[1]
+      })
+      return items
     }
   },
   mounted () {
@@ -65,6 +88,12 @@ export default {
         this.matches = data
       }).catch(_ => {
         this.matches = null
+      })
+    this.$http.get(`rankings/${this.$route.params.key}`)
+      .then(data => {
+        return data.json()
+      }).then(data => {
+        this.rankings = data
       })
   }
 }

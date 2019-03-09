@@ -4,6 +4,7 @@ import json
 import os
 import datetime
 import numpy as np
+from itertools import chain
 
 from ..models import *
 from ..predictors import *
@@ -101,6 +102,59 @@ def get_matches(event):
     ).all()
     series = [x.serialize for x in matches]
     return jsonify(series)
+
+@api.route('rankings/<string:event>', methods=['GET'])
+@cache.memoize(timeout=5 * MINUTE)
+def get_rankings(event):
+    if Event.query.get(event) is None:
+        resp = jsonify([])
+        resp.status_code = 404
+        return resp
+    matches = Match.query.filter(
+        Match.event_key == event
+    ).filter(
+        Match.comp_level == "qm"
+    ).options(
+        joinedload(Match.alliances)
+    ).order_by(
+        Match.time,
+        sort_order,
+        Match.match_number
+    ).all()
+    team_scores = {}
+    for match in matches:
+        for alliance in match.alliances:
+            for team in alliance.team_keys:
+                if team.key not in team_scores:
+                    team_scores[team.key] = 0
+    for match in filter(lambda x: x.result() is not None, matches):
+        winner = match.winning_alliance
+        points = 2
+        alliances = match.get_alliances()
+        if winner == "":
+            points = 1
+            teams = list(chain.from_iterable([x.team_keys for x in match.alliances]))
+        else:
+            teams = alliances[winner].team_keys
+        for team in teams:
+            team_scores[team.key] += points
+        colors = ['red', 'blue']
+        for color in colors:
+            if match.score_breakdown[color]["habDockingRankingPoint"]:
+                for team in alliances[color].team_keys:
+                    team_scores[team.key] += 1
+            if match.score_breakdown[color]["completeRocketRankingPoint"]:
+                for team in alliances[color].team_keys:
+                    team_scores[team.key] += 1
+    for match in filter(lambda x: x.result() is None, matches):
+        alliances = match.get_alliances()
+        p = match.get_prediction("EloScorePredictor").prediction
+        for team in alliances["red"].team_keys:
+            team_scores[team.key] += 2 * p
+        for team in alliances["blue"].team_keys:
+            team_scores[team.key] += 2 * (1 - p)
+    #for match in matches:
+    return jsonify(team_scores)
 
 @api.route('verify/brier/<int:year>', methods=['GET'])
 @cache.memoize(timeout=MINUTE)
