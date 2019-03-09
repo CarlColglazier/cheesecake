@@ -16,6 +16,8 @@ from .times import *
 api = Blueprint('api', __name__)
 
 elo_predictor = EloScorePredictor()
+hab_predictor = BetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
+rocket_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
 
 @cache.memoize(timeout=MINUTE)
 def predict():
@@ -24,6 +26,8 @@ def predict():
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
     predictor = EloScorePredictor()
+    h_predictor = BetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
+    r_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
     predictor.elos = elos
     for match in matches:
         p = predictor.predict(match)
@@ -38,10 +42,39 @@ def predict():
                                         model=type(predictor).__name__)
         history.prediction = p
         db.session.add(history)
+        p = h_predictor.predict(match)
+        history = [x for x in match.predictions if h_predictor.feature in x.model]
+        if len(history) > 0:
+            for h in history:
+                h.prediction = p[h.model]
+                db.session.add(h)
+        else:
+            for alliance in match.alliances:
+                key = h_predictor.feature + alliance.color
+                h = PredictionHistory(match=match.key,
+                                      prediction=p[key],
+                                      model=key)
+                db.session.add(h)
+        p = r_predictor.predict(match)
+        history = [x for x in match.predictions if r_predictor.feature in x.model]
+        if len(history) > 0:
+            for h in history:
+                h.prediction = p[h.model]
+                db.session.add(h)
+        else:
+            for alliance in match.alliances:
+                key = r_predictor.feature + alliance.color
+                h = PredictionHistory(match=match.key,
+                                      prediction=p[key],
+                                      model=key)
+                db.session.add(h)
         if sum([x.score for x in match.alliances]) != -2:
             predictor.add_result(match)
+            h_predictor.add_result(match)
+            r_predictor.add_result(match)
     db.session.commit()
     elo_predictor = predictor
+    hab_predictor = h_predictor
 
 @api.route('/', methods=['POST'])
 def webhook():
@@ -50,8 +83,11 @@ def webhook():
         update_schedule(data["message_data"]["event_key"])
         predict()
     if data["message_type"] == "match_score":
-        update_match(data["message_data"]["match"])
-        predict()
+        m = update_match(data["message_data"]["match"])
+        global elo_predictor, hab_predictor, rocket_predictor
+        elo_predictor.add_result(m)
+        hab_predictor.add_result(m)
+        rocket_predictor.add_result(m)
     if data["message_type"] == "verification":
         print(data)
     return jsonify([])
@@ -149,10 +185,18 @@ def get_rankings(event):
     for match in filter(lambda x: x.result() is None, matches):
         alliances = match.get_alliances()
         p = match.get_prediction("EloScorePredictor").prediction
+        hr = match.get_prediction("habDockingRankingPointred").prediction
+        hb = match.get_prediction("habDockingRankingPointblue").prediction
+        rr = match.get_prediction("completeRocketRankingPointred").prediction
+        rb = match.get_prediction("completeRocketRankingPointblue").prediction
         for team in alliances["red"].team_keys:
             team_scores[team.key] += 2 * p
+            team_scores[team.key] += hr
+            team_scores[team.key] += rr
         for team in alliances["blue"].team_keys:
             team_scores[team.key] += 2 * (1 - p)
+            team_scores[team.key] += hb
+            team_scores[team.key] += rb
     #for match in matches:
     return jsonify(team_scores)
 

@@ -8,10 +8,10 @@ class Predictor(abc.ABC):
     def __init__(self):
         pass
 
-    def predict_match(self, match: Match) -> float:
+    def predict_match(self, match: Match):
         return 0.0
 
-    def predict(self, match: Match) -> float:
+    def predict(self, match: Match):
         p = self.predict_match(match)
         return p
 
@@ -23,6 +23,43 @@ class Predictor(abc.ABC):
 
     def current_values(self):
         return
+
+class BetaPredictor(Predictor):
+    def __init__(self, a, b, feature):
+        self.a = a
+        self.b = b
+        self.feature = feature
+        self.teams = {}
+
+    def predict_match(self, match: Match):
+        predictions = {}
+        for alliance in match.alliances:
+            current = 0
+            for team in alliance.team_keys:
+                if team.key not in self.teams:
+                    self.teams[team.key] = {
+                        "attempts": 0,
+                        "completions": 0
+                    }
+                score = self.teams[team.key]
+                calc = (self.a + score["completions"]) / (self.b + self.a + score["attempts"])
+                current = max(current, calc)
+            predictions[self.feature + alliance.color] = current
+        return predictions
+
+    def add_result(self, match: Match):
+        if match.comp_level != "qm":
+            return
+        for alliance in match.alliances:
+            for team in alliance.team_keys:
+                if team.key not in self.teams:
+                    self.teams[team.key] = {
+                        "attempts": 0,
+                        "completions": 0
+                    }
+                self.teams[team.key]["attempts"] += 1
+                if match.score_breakdown[alliance.color][self.feature]:
+                    self.teams[team.key]["completions"] += 1
 
 class EloPredictor(Predictor):
     def __init__(self):

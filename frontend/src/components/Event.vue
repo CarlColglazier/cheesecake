@@ -15,20 +15,34 @@
           <tr>
             <th>Match</th>
             <th>Red</th>
+            <th>Win</th>
+            <th>Dock</th>
+            <th>Rocket</th>
             <th>Blue</th>
-            <th>Prediction</th>
+            <th>Win</th>
+            <th>Dock</th>
+            <th>Rocket</th>
           </tr>
         </thead>
         <tbody>
         <tr v-for="match in matches" :key="match.key">
           <td>{{match.comp_level}}{{match.match_number}}</td>
           <td class="red right">{{match.alliances.red.score}}</td>
+          <td class="center" :class="{
+                      strike: (match.predictions.EloScorePredictor < 0.5 && match.winning_alliance =='red') || (match.predictions.EloScorePredictor > 0.5 && match.winning_alliance =='blue')
+              }">
+              {{match.predictions.EloScorePredictor | round(2) }}
+          </td>
+          <td>{{match.predictions.habDockingRankingPointred | round(2)}}</td>
+          <td>{{match.predictions.completeRocketRankingPointred | round(2)}}</td>
           <td class="blue right">{{match.alliances.blue.score}}</td>
           <td class="center" :class="{
                       strike: (match.predictions.EloScorePredictor < 0.5 && match.winning_alliance =='red') || (match.predictions.EloScorePredictor > 0.5 && match.winning_alliance =='blue')
               }">
-            {{match.predictions.EloScorePredictor | round(2) }}
+            {{1 - match.predictions.EloScorePredictor | round(2) }}
           </td>
+          <td>{{match.predictions.habDockingRankingPointblue | round(2)}}</td>
+          <td>{{match.predictions.completeRocketRankingPointblue | round(2)}}</td>
         </tr>
         </tbody>
       </table>
@@ -113,7 +127,7 @@ export default {
      background-color: #EEF;
  }
  th, td {
-     min-width: 3em;
+     min-width: 2em;
      padding: .5em;
  }
 

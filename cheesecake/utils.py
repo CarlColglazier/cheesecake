@@ -54,6 +54,7 @@ def update_match(match):
             setattr(m, cname, match[cname])
     db.session.merge(m)    
     db.session.commit()
+    return m
 
 def update_schedule(event):
     matches = tba.event_matches(event)
