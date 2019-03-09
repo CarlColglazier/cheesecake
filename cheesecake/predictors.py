@@ -58,6 +58,8 @@ class BetaPredictor(Predictor):
                         "completions": 0
                     }
                 self.teams[team.key]["attempts"] += 1
+                if not match.score_breakdown:
+                    continue
                 if match.score_breakdown[alliance.color][self.feature]:
                     self.teams[team.key]["completions"] += 1
 
