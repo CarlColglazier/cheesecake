@@ -12,6 +12,7 @@ class Alliance(db.Model):
         order_by=alliance_teams.c.position,
         backref=db.backref('alliances', lazy=True))
     match_key = db.Column(db.String(25), db.ForeignKey('match.key'))
+    surrogate = None
     surrogate_team_keys = None
     dq_team_keys = None
 

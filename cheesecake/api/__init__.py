@@ -21,7 +21,7 @@ rocket_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
 
 @cache.memoize(timeout=MINUTE)
 def predict():
-    global elo_predictor
+    global elo_predictor, hab_predictor, rocket_predictor
     matches = fetch_matches(2019)
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
@@ -119,7 +119,7 @@ def get_official_events_upcoming():
     return jsonify([x.serialize for x in events])
 
 @api.route('matches/<string:event>', methods=['GET'])
-@cache.memoize(timeout=2 * MINUTE)
+@cache.memoize(timeout=MINUTE)
 def get_matches(event):
     if Event.query.get(event) is None:
         resp = jsonify([])
@@ -140,7 +140,7 @@ def get_matches(event):
     return jsonify(series)
 
 @api.route('rankings/<string:event>', methods=['GET'])
-@cache.memoize(timeout=5 * MINUTE)
+@cache.memoize(timeout=MINUTE)
 def get_rankings(event):
     if Event.query.get(event) is None:
         resp = jsonify([])
@@ -238,8 +238,7 @@ def calibration(year):
         
 @api.route('/teams/rankings', methods=['GET'])
 def rankings():
-    if not elo_predictor:
-        return jsonify([])
+    global elo_predcitor
     return jsonify(
         sorted(
             elo_predictor.elos.items(),

@@ -6,7 +6,6 @@ from flask_migrate import Migrate
 from secret import *
 import tbapy
 import os
-
 from config import DevelopmentConfig, ProductionConfig
 
 # Flask extensions
@@ -38,7 +37,6 @@ def create_app():
     print("Initializing cache.")
     cache.init_app(app)
     Migrate(app, db, compare_type=True)
-
     from .api import api as api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')
     return app
