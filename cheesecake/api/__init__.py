@@ -22,7 +22,7 @@ rocket_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
 @cache.memoize(timeout=MINUTE)
 def predict():
     global elo_predictor, hab_predictor, rocket_predictor
-    matches = fetch_matches(2019)
+    matches = chain.from_iterable(fetch_matches(2019))
     filehandler = open("elo.json", 'r')
     elos = json.load(filehandler)
     predictor = EloScorePredictor()
@@ -203,22 +203,22 @@ def get_rankings(event):
 @api.route('verify/brier/<int:year>', methods=['GET'])
 @cache.memoize(timeout=MINUTE)
 def brier(year):
-    matches = fetch_matches(year)
+    matches = chain.from_iterable(fetch_matches(2019))
     completed = [x for x in matches if x.result() is not None]
-    score = [(x.predictions[0].prediction - x.result()) ** 2 for x in completed]
+    score = [(x.get_prediction("EloScorePredictor").prediction - x.result()) ** 2 for x in completed]
     return jsonify({
         "brier": sum(score) / len(score)
     })
 
 @api.route('verify/calibration/<int:year>', methods=['GET'])
 def calibration(year):
-    matches = fetch_matches(year)
+    matches = chain.from_iterable(fetch_matches(2019))
     completed = [x for x in matches if x.result() is not None]
     m = []
     for match in completed:
         m.append({
             "winner": match.result(),
-            "prediction": match.predictions[0].prediction
+            "prediction": match.get_prediction("EloScorePredictor").prediction
         })
     results = {}
     for i in np.arange(0, 1, .1):

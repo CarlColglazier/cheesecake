@@ -13,7 +13,6 @@ MATCH_ORDER = {
 }
 sort_order = db.case(value=Match.comp_level, whens=MATCH_ORDER)
 
-@cache.memoize(timeout=MINUTE)
 def fetch_matches(year=None):
     matches =  Match.query.join(Event).filter(
         Event.event_type < 10
@@ -25,10 +24,17 @@ def fetch_matches(year=None):
     matches = matches.options(
         joinedload('alliances'),
         joinedload('predictions')
-    ).order_by(
+    )
+    matches = matches.order_by(
         Event.start_date,
         Match.time,
         sort_order,
         Match.match_number
-    ).all()
-    return matches
+    )
+    count = matches.count()
+    page_size = 500
+    for i in range(int(count / page_size)):
+        matches = matches.limit(page_size)
+        matches = matches.offset(page_size * i)
+        print(i)
+        yield matches.all()
