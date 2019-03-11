@@ -176,6 +176,9 @@ def get_rankings(event):
             team_scores[team.key] += points
         colors = ['red', 'blue']
         for color in colors:
+            # TODO
+            if not match.score_breakdown:
+                continue
             if match.score_breakdown[color]["habDockingRankingPoint"]:
                 for team in alliances[color].team_keys:
                     team_scores[team.key] += 1
