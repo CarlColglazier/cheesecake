@@ -33,7 +33,7 @@ def fetch_matches(year=None):
     )
     count = matches.count()
     page_size = 500
-    for i in range(int(count / page_size)):
+    for i in range(int(count / page_size) + 1):
         matches = matches.limit(page_size)
         matches = matches.offset(page_size * i)
         print(i)
