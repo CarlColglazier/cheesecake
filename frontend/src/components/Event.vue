@@ -1,10 +1,10 @@
 <template>
   <div>
     <Header/>
-    <div v-if="matches == null">
+    <section v-if="matches == null">
       <Error message="Event not found" />
-    </div>
-    <div v-else>
+    </section>
+    <section v-else>
       <h2>{{ this.$route.params.key }}</h2>
       <a :href="tbahref">
         The Blue Alliance
@@ -14,64 +14,42 @@
         <thead>
           <tr>
             <th>Match</th>
-            <th>Red</th>
-            <th>Win</th>
-            <th>Dock</th>
-            <th>Rocket</th>
-            <th>Blue</th>
+            <th colspan="3">Teams</th>
+            <th>Score</th>
             <th>Win</th>
             <th>Dock</th>
             <th>Rocket</th>
           </tr>
         </thead>
-        <tbody>
-        <tr v-for="match in matches" :key="match.key">
-          <td>{{match.comp_level}}{{match.match_number}}</td>
-          <td class="red right">{{match.alliances.red.score}}</td>
-          <td class="center" :class="{
-                      strike: (match.predictions.EloScorePredictor < 0.5 && match.winning_alliance =='red') || (match.predictions.EloScorePredictor > 0.5 && match.winning_alliance =='blue')
-              }">
-              {{match.predictions.EloScorePredictor | round(2) }}
-          </td>
-          <td>{{match.predictions.habDockingRankingPointred | round(2)}}</td>
-          <td>{{match.predictions.completeRocketRankingPointred | round(2)}}</td>
-          <td class="blue right">{{match.alliances.blue.score}}</td>
-          <td class="center" :class="{
-                      strike: (match.predictions.EloScorePredictor < 0.5 && match.winning_alliance =='red') || (match.predictions.EloScorePredictor > 0.5 && match.winning_alliance =='blue')
-              }">
-            {{1 - match.predictions.EloScorePredictor | round(2) }}
-          </td>
-          <td>{{match.predictions.habDockingRankingPointblue | round(2)}}</td>
-          <td>{{match.predictions.completeRocketRankingPointblue | round(2)}}</td>
-        </tr>
-        </tbody>
+        <PredictionRow v-for="match in matches" :match="match" :key="match.key" />
       </table>
       <p v-else>
         Matches have not been released yet for this event.
         Please check back later.
       </p>
-    </div>
-    <div>
+    </section>
+    <section v-if="matches.length > 0">
       <h3>Rankings (Predicted)</h3>
       <table>
         <thead><tr><th>Rank</th><th>Team</th><th>Est. Rank Points</th></tr></thead>
         <tbody>
-          <tr v-for="(key, index) in orderedrank" :key="key">
+          <tr v-for="(key, index) in orderedrank" :key="index">
             <td>{{index + 1}}</td><td>{{key[0]}}</td><td class="right">{{key[1] | round(1) }}</td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </section>
   </div>
 </template>
 
 <script>
 import Header from '@/components/Header'
 import Error from '@/components/Error'
+import PredictionRow from '@/components/PredictionRow'
 
 export default {
   name: 'Event',
-  components: { Header, Error },
+  components: { Header, Error, PredictionRow },
   data () {
     return {
       matches: [],
@@ -152,4 +130,8 @@ export default {
      text-decoration: line-through;
  }
 
+ section {
+     display: inline-block;
+     padding-right: 7.5em;
+  }
 </style>

@@ -44,6 +44,16 @@ class Match(db.Model):
         predictions = [x.serialize for x in self.predictions]
         for p in predictions:
             preds[p["model"]] = p["prediction"]
+        breakdown = {
+            "red": {},
+            "blue": {}
+        }
+        for color, dic in breakdown.items():
+            if not self.score_breakdown:
+                continue
+            for key, value in self.score_breakdown[color].items():
+                if 'RankingPoint' in key:
+                    dic[key] = value
         return {
             "key": self.key,
             "comp_level": self.comp_level,
@@ -51,6 +61,7 @@ class Match(db.Model):
             "winning_alliance": self.winning_alliance,
             "alliances": alliances,
             "predictions": preds,
+            "score_breakdown": breakdown
         }
 
 

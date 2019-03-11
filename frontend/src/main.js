@@ -34,6 +34,18 @@ Vue.filter('round', function (value, decimals) {
   return value
 })
 
+Vue.filter('rounds', function (value, decimals) {
+  if (!value) {
+    value = 0
+  }
+  if (!decimals) {
+    decimals = 0
+  }
+  value *= Math.pow(10, decimals)
+  value = Math.round(value)
+  return '.' + value.toString().padStart(2, '0')
+})
+
 Vue.filter('prediction', function (fl) {
   const S1 = 0.19146
   const S2 = 0.34134
