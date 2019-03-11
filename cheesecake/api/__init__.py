@@ -200,7 +200,6 @@ def get_rankings(event):
             team_scores[team.key] += 2 * (1 - p)
             team_scores[team.key] += hb
             team_scores[team.key] += rb
-    #for match in matches:
     return jsonify(team_scores)
 
 @api.route('verify/brier/<int:year>', methods=['GET'])
