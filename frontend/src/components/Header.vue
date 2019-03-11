@@ -4,6 +4,7 @@
     <ul>
       <router-link tag="li" to="/"><a>Home</a></router-link>
       <router-link tag="li" to="/events"><a>Events</a></router-link>
+      <router-link tag="li" to="/rankings"><a>Rankings</a></router-link>
     </ul>
   </header>
 </template>
