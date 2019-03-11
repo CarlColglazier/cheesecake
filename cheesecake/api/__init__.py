@@ -202,19 +202,31 @@ def get_rankings(event):
             team_scores[team.key] += rb
     return jsonify(team_scores)
 
-@api.route('verify/brier/<int:year>', methods=['GET'])
-@cache.memoize(timeout=MINUTE)
+@api.route('verify/<int:year>', methods=['GET'])
+@cache.memoize(timeout=HOUR)
 def brier(year):
-    matches = chain.from_iterable(fetch_matches(2019))
-    completed = [x for x in matches if x.result() is not None]
-    score = [(x.get_prediction("EloScorePredictor").prediction - x.result()) ** 2 for x in completed]
+    matches = chain.from_iterable(fetch_matches(year))
+    score_total = 0.0
+    correct = 0
+    total = 0
+    for match in matches:
+        if match.result() is None:
+            continue
+        total += 1
+        diff = match.get_prediction("EloScorePredictor").prediction - match.result()
+        score_total += diff ** 2
+        if abs(diff) < 0.5 and match.result() != 0.5:
+            correct += 1
     return jsonify({
-        "brier": sum(score) / len(score)
+        "brier": score_total / total,
+        "correct": correct,
+        "total": total
     })
 
 @api.route('verify/calibration/<int:year>', methods=['GET'])
+@cache.memoize(timeout=HOUR)
 def calibration(year):
-    matches = chain.from_iterable(fetch_matches(2019))
+    matches = chain.from_iterable(fetch_matches(year))
     completed = [x for x in matches if x.result() is not None]
     m = []
     for match in completed:
