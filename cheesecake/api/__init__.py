@@ -80,6 +80,7 @@ def predict():
     db.session.commit()
     elo_predictor = predictor
     hab_predictor = h_predictor
+    rocket_predictor = r_predictor
 
 def predict_event(event_key):
     global elo_predictor, hab_predictor, rocket_predictor
