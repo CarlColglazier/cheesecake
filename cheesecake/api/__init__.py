@@ -94,7 +94,7 @@ def predict_event(event_key):
         sort_order,
         Match.match_number
     ).all()
-    matches = [x for x in matches if x.result() is not None]
+    matches = [x for x in matches if x.result() is None]
     for match in matches:
         predict_match(match, elo_predictor, hab_predictor, rocket_predictor)
     db.session.commit()
