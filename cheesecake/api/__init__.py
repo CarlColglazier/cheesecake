@@ -112,7 +112,7 @@ def webhook():
         elo_predictor.add_result(m)
         hab_predictor.add_result(m)
         rocket_predictor.add_result(m)
-        predict_event(m.event_key.key)
+        predict_event(m.event_key)
     if data["message_type"] == "verification":
         print(data)
     return jsonify([])
