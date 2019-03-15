@@ -36,6 +36,13 @@ def update_match(match):
         blue = Alliance(**match["alliances"]["blue"])
     else:
         blue.score = match["alliances"]["blue"]["score"]
+    # Get rid of leftover teams if a match was rescheduled.
+    for team in red.team_keys:
+        if team.key not in red_teams:
+            red.team_keys.remove(team)
+    for team in blue.team_keys:
+        if team.key not in blue_teams:
+            blue.team_keys.remove(team)
     for team in red_teams:
         t = Team.query.get(team)
         if t and t not in red.team_keys:
