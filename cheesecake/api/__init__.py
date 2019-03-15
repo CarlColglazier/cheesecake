@@ -19,6 +19,52 @@ elo_predictor = EloScorePredictor()
 hab_predictor = BetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
 rocket_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
 
+def predict_match(match, predictor, h_predictor, r_predictor):
+    # TODO: Better variable names
+    p = predictor.predict(match)
+    history = [x for x in match.predictions if x.model == type(predictor).__name__]
+    if len(history) > 0:
+        history = history[0]
+    else:
+        history = None
+    if not history:
+        history = PredictionHistory(match=match.key,
+                                    prediction=p,
+                                    model=type(predictor).__name__)
+    history.prediction = p
+    db.session.add(history)
+    p = h_predictor.predict(match)
+    history = [x for x in match.predictions if h_predictor.feature in x.model]
+    if len(history) > 0:
+        for h in history:
+            h.prediction = p[h.model]
+            db.session.add(h)
+    else:
+        for alliance in match.alliances:
+            key = h_predictor.feature + alliance.color
+            h = PredictionHistory(match=match.key,
+                                  prediction=p[key],
+                                  model=key)
+            db.session.add(h)
+    p = r_predictor.predict(match)
+    history = [x for x in match.predictions if r_predictor.feature in x.model]
+    if len(history) > 0:
+        for h in history:
+            h.prediction = p[h.model]
+            db.session.add(h)
+    else:
+        for alliance in match.alliances:
+            key = r_predictor.feature + alliance.color
+            h = PredictionHistory(match=match.key,
+                                  prediction=p[key],
+                                  model=key)
+            db.session.add(h)
+    if sum([x.score for x in match.alliances]) != -2:
+        predictor.add_result(match)
+        h_predictor.add_result(match)
+        r_predictor.add_result(match)
+    
+
 @cache.memoize(timeout=MINUTE)
 def predict():
     global elo_predictor, hab_predictor, rocket_predictor
@@ -30,51 +76,29 @@ def predict():
     r_predictor = BetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
     predictor.elos = elos
     for match in matches:
-        p = predictor.predict(match)
-        history = [x for x in match.predictions if x.model == type(predictor).__name__]
-        if len(history) > 0:
-            history = history[0]
-        else:
-            history = None
-        if not history:
-            history = PredictionHistory(match=match.key,
-                                        prediction=p,
-                                        model=type(predictor).__name__)
-        history.prediction = p
-        db.session.add(history)
-        p = h_predictor.predict(match)
-        history = [x for x in match.predictions if h_predictor.feature in x.model]
-        if len(history) > 0:
-            for h in history:
-                h.prediction = p[h.model]
-                db.session.add(h)
-        else:
-            for alliance in match.alliances:
-                key = h_predictor.feature + alliance.color
-                h = PredictionHistory(match=match.key,
-                                      prediction=p[key],
-                                      model=key)
-                db.session.add(h)
-        p = r_predictor.predict(match)
-        history = [x for x in match.predictions if r_predictor.feature in x.model]
-        if len(history) > 0:
-            for h in history:
-                h.prediction = p[h.model]
-                db.session.add(h)
-        else:
-            for alliance in match.alliances:
-                key = r_predictor.feature + alliance.color
-                h = PredictionHistory(match=match.key,
-                                      prediction=p[key],
-                                      model=key)
-                db.session.add(h)
-        if sum([x.score for x in match.alliances]) != -2:
-            predictor.add_result(match)
-            h_predictor.add_result(match)
-            r_predictor.add_result(match)
+        predict_match(match, predictor, h_predictor, r_predictor)
     db.session.commit()
     elo_predictor = predictor
     hab_predictor = h_predictor
+
+def predict_event(event_key):
+    global elo_predictor, hab_predictor, rocket_predictor
+    matches = Match.query.filter(
+        Match.event_key == event_key
+    ).options(
+        joinedload(Match.alliances)
+    ).options(
+        joinedload(Match.predictions)
+    ).order_by(
+        Match.time,
+        sort_order,
+        Match.match_number
+    ).all()
+    matches = [x for x in matches if x.result() is not None]
+    for match in matches:
+        predict_match(match, elo_predictor, hab_predictor, rocket_predictor)
+    db.session.commit()
+    
 
 @api.route('/', methods=['POST'])
 def webhook():
@@ -88,6 +112,7 @@ def webhook():
         elo_predictor.add_result(m)
         hab_predictor.add_result(m)
         rocket_predictor.add_result(m)
+        predict_event(m.event_key.key)
     if data["message_type"] == "verification":
         print(data)
     return jsonify([])
@@ -259,4 +284,19 @@ def rankings():
             key=lambda x: x[1],
             reverse=True
         )[0:25]
+    )
+
+@api.route('/district/<string:dist>/rankings', methods=['GET'])
+def district(dist):
+    global elo_predcitor
+    teams = District.query.get(dist).teams
+    keys = [x.key for x in teams]
+    elos = elo_predictor.elos
+    elos = {key: value for (key, value) in elos.items() if key in keys}
+    return jsonify(
+        sorted(
+            elos.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
     )
