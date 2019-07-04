@@ -11,25 +11,25 @@ import (
 	"sync"
 )
 
-// URL for The Blue Alliance API. We are on v3 at the moment.
+// BASE URL for The Blue Alliance API. We are on v3 at the moment.
 const BASE = "https://thebluealliance.com/api/v3/"
 
-/// An API call item for the cache.
+/// TBACall is n API call item for the cache.
 type TBACall struct {
 	Modified string
 	Body     string
 }
 
-/// Strores the access key; caches responses.
+/// TheBlueAlliance strores the access key; caches responses.
 type TheBlueAlliance struct {
 	Key   string
 	cache map[string]TBACall
 	pool  *radix.Pool
 }
 
-/// Create a new TheBlueAlliance object and initialize the cache.
-/// Note: the Key is super required because you can't access the API
-/// without it.
+// NewTba creates a new TheBlueAlliance object and initialize the
+// cache.  Note: the Key is super required because you can't access
+// the API without it.
 func NewTba(key string, pool *radix.Pool) *TheBlueAlliance {
 	var tba TheBlueAlliance
 	tba.Key = key
@@ -39,10 +39,12 @@ func NewTba(key string, pool *radix.Pool) *TheBlueAlliance {
 	return &tba
 }
 
+// tbaRequest is an internal function that fetches data from The Blue
+// Alliance. It integrates with the cache to increase speed and reduce
+// network load.
 func (tba *TheBlueAlliance) tbaRequest(url string) (string, error) {
 	fmt.Println(url)
 	lastTime := "Sun, 30 Jun 2000 09:07:40 GMT"
-	//var val TBACall = TBACall{Modified: "", Body: ""}
 	var s []byte
 	val := TBACall{Modified: "", Body: ""}
 	err := tba.pool.Do(radix.Cmd(&s, "GET", url))
