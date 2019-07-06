@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
+	//"sync"
 )
 
 // BASE URL for The Blue Alliance API. We are on v3 at the moment.
@@ -72,8 +72,7 @@ func (tba *TheBlueAlliance) tbaRequest(url string) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 304 {
-		body := val.Body
-		return body, nil
+		return val.Body, nil
 	} else if resp.StatusCode == 200 {
 		respTime := resp.Header.Get("Last-Modified")
 		body, _ := ioutil.ReadAll(resp.Body)
@@ -96,45 +95,75 @@ func (tba *TheBlueAlliance) Team(s string) (string, error) {
 	return tba.tbaRequest(url)
 }
 
-func (tba *TheBlueAlliance) GetAllTeams() error {
-	var wg sync.WaitGroup
-
-	for i := 0; i < 20; i++ {
+func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
+	pages := 20
+	channel := make(chan []Team)
+	for i := 0; i < pages; i++ {
 		url := fmt.Sprintf("teams/%d", i)
-
-		go func() {
-			defer wg.Done()
-			tba.tbaRequest(url)
-		}()
-
-		wg.Add(1)
+		go func(url string) error {
+			log.Println(url)
+			teamString, err := tba.tbaRequest(url)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			var teamList []Team
+			err = json.Unmarshal([]byte(teamString), &teamList)
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			fmt.Println("Got data for ", url)
+			channel <- teamList
+			return nil
+		}(url)
 	}
-	wg.Wait()
-	return nil
+	var teamList []Team
+	for i := 0; i < pages; i++ {
+		teams := <-channel
+		teamList = append(teamList, teams...)
+	}
+	return teamList, nil
 }
 
-func (tba *TheBlueAlliance) GetAllEventMatches(year int) (err error) {
+func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
 	events, err := tba.tbaRequest(fmt.Sprintf("events/%d/keys", year))
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	var eventStrings []string
 	err = json.Unmarshal([]byte(events), &eventStrings)
 	if err != nil {
-		return
+		return nil, err
 	}
-	var wg sync.WaitGroup
+	channel := make(chan []Match)
 	for _, key := range eventStrings {
 		url := fmt.Sprintf("event/%s/matches", key)
-		go func() {
-			defer wg.Done()
-			tba.tbaRequest(url)
-		}()
-		wg.Add(1)
+		go func(url string) {
+			matchesString, _ := tba.tbaRequest(url)
+			var matchList []Match
+			_ = json.Unmarshal([]byte(matchesString), &matchList)
+			channel <- matchList
+		}(url)
 	}
-	wg.Wait()
-	return nil
+	var matchList []Match
+	for i := 0; i < len(eventStrings); i++ {
+		matches := <-channel
+		matchList = append(matchList, matches...)
+	}
+	return matchList, nil
+}
+
+func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
+	events, err := tba.tbaRequest(fmt.Sprintf("events/%d", year))
+	if err != nil {
+		return nil, err
+	}
+	var e []Event
+	err = json.Unmarshal([]byte(events), &e)
+	//fmt.Println(e)
+	return e, err
 }
 
 func (tba *TheBlueAlliance) Close() {
