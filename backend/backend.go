@@ -3,19 +3,20 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
+	// "github.com/gorilla/mux"
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
 	"github.com/mediocregopher/radix"
 	"io/ioutil"
 	"log"
-	"net/http"
+	// "net/http"
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
-const POOLS = 2
+const POOLS = 4
 
 type Config struct {
 	Pool *radix.Pool
@@ -23,6 +24,7 @@ type Config struct {
 	Tba  *TheBlueAlliance
 }
 
+/*
 func runServer(config Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
@@ -39,7 +41,7 @@ func TeamReq(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Category: %v\n", vars["key"])
 }
-
+*/
 func ReadEloRecords() map[string]float64 {
 	file, err := ioutil.ReadFile("elo2018.json")
 	if err != nil {
@@ -64,13 +66,31 @@ func reset(config Config) {
 		// handle error.
 		log.Fatal(err)
 	}
-	/*
-		teamList, err := config.Tba.GetAllTeams()
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println(len(teamList))
-	*/
+	teamList, err := config.Tba.GetAllTeams()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var teams [][]interface{}
+	for _, row := range teamList {
+		teams = append(teams, []interface{}{
+			row.Key,
+			row.TeamNumber,
+			row.Name,
+		})
+	}
+	copyCount, _ := config.Conn.CopyFrom(
+		pgx.Identifier{"team"},
+		[]string{"key", "team_number", "name"},
+		pgx.CopyFromRows(teams),
+	)
+	fmt.Println(copyCount)
+	time.Sleep(2 * time.Second)
+	var t int
+	err = config.Conn.QueryRow("SELECT COUNT('key') FROM team").Scan(&t)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(t)
 	var wg sync.WaitGroup
 	for i := 2003; i <= 2019; i++ {
 		fmt.Println(i)
@@ -96,6 +116,8 @@ func reset(config Config) {
 	wg.Wait()
 	rows, _ := config.Tba.GetAllEventMatches(2019)
 	var r [][]interface{}
+	var a [][]interface{}
+	var aTeams [][]interface{}
 	for _, row := range rows {
 		r = append(r, []interface{}{
 			row.Key,
@@ -105,8 +127,27 @@ func reset(config Config) {
 			row.WinningAlliance,
 			row.EventKey,
 		})
+		a = append(a, []interface{}{
+			row.Key + "_blue",
+			row.Alliances.Blue.Score,
+			"blue",
+			row.Key,
+		})
+		for _, team := range row.Alliances.Blue.TeamKeys {
+			aTeams = append(aTeams,
+				[]interface{}{
+					row.Key + "_blue",
+					team,
+				})
+		}
+		a = append(a, []interface{}{
+			row.Key + "_red",
+			row.Alliances.Red.Score,
+			"red",
+			row.Key,
+		})
 	}
-	copyCount, _ := config.Conn.CopyFrom(
+	copyCount, _ = config.Conn.CopyFrom(
 		pgx.Identifier{"match"},
 		[]string{
 			"key", "comp_level", "set_number", "match_number", "winning_alliance", "event_key",
@@ -114,6 +155,26 @@ func reset(config Config) {
 		pgx.CopyFromRows(r),
 	)
 	fmt.Println(copyCount)
+	copyCount, _ = config.Conn.CopyFrom(
+		pgx.Identifier{"alliance"},
+		[]string{
+			"key", "score", "color", "match_key",
+		},
+		pgx.CopyFromRows(a),
+	)
+	fmt.Println(copyCount)
+	copyCount, err = config.Conn.CopyFrom(
+		pgx.Identifier{"alliance_teams"},
+		[]string{
+			"alliance_id", "team_key",
+		},
+		pgx.CopyFromRows(aTeams),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(copyCount)
+
 }
 
 func main() {
@@ -133,9 +194,10 @@ func main() {
 	config := Config{Pool: pool, Conn: conn, Tba: tbaInst}
 	args := os.Args[1:]
 	if len(args) == 1 {
-		if args[0] == "server" {
+		/*if args[0] == "server" {
 			runServer(config)
-		} else if args[0] == "reset" {
+		} else*/
+		if args[0] == "reset" {
 			reset(config)
 		}
 	}

@@ -113,7 +113,6 @@ func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
 				log.Println(err)
 				return err
 			}
-			fmt.Println("Got data for ", url)
 			channel <- teamList
 			return nil
 		}(url)

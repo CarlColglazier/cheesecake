@@ -68,14 +68,14 @@ CREATE TABLE "match" (
  	CONSTRAINT match_event_key_fkey FOREIGN KEY (event_key) REFERENCES event(key)
 );
 
--- CREATE TABLE alliance (
--- 	"key" varchar(25) NOT NULL,
--- 	score int4 NULL,
--- 	color varchar(10) NULL,
--- 	match_key varchar(25) NULL,
--- 	CONSTRAINT alliance_pkey PRIMARY KEY (key),
--- 	CONSTRAINT alliance_match_key_fkey FOREIGN KEY (match_key) REFERENCES match(key)
--- );
+CREATE TABLE alliance (
+	"key" varchar(25) NOT NULL,
+	score int4 NULL,
+	color varchar(10) NULL,
+	match_key varchar(25) NULL,
+	CONSTRAINT alliance_pkey PRIMARY KEY (key),
+	CONSTRAINT alliance_match_key_fkey FOREIGN KEY (match_key) REFERENCES match(key)
+);
 
 
 -- CREATE TABLE prediction_history (
@@ -86,3 +86,13 @@ CREATE TABLE "match" (
 -- 	CONSTRAINT prediction_history_pkey PRIMARY KEY (key),
 -- 	CONSTRAINT prediction_history_match_fkey FOREIGN KEY (match) REFERENCES match(key)
 -- );
+
+CREATE TABLE alliance_teams (
+	"position" SERIAL,
+	alliance_id varchar(25) NOT NULL,
+	team_key varchar(8) NOT NULL,
+ 	CONSTRAINT alliance_teams_pkey PRIMARY KEY ("position", alliance_id, team_key),
+	CONSTRAINT alliance_teams_alliance_id_fkey FOREIGN KEY (alliance_id) REFERENCES alliance(key)
+	-- TODO: Only download official matches?
+ --CONSTRAINT alliance_teams_team_key_fkey FOREIGN KEY (team_key) REFERENCES team(key)
+);
