@@ -182,7 +182,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	pool, err := radix.NewPool("tcp", "127.0.0.1:6379", POOLS)
+	pool, err := radix.NewPool("tcp", "0.0.0.0:6379", POOLS)
 	conn := Connect("cheesecake")
 	defer pool.Close()
 	tbakey := os.Getenv("TBA_KEY")
