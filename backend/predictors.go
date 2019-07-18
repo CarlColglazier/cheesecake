@@ -19,11 +19,11 @@ func ReadEloRecords() (map[string]float64, error) {
 	return records, nil
 }
 
-type predictor interface {
+type Predictor interface {
 	//predictMatch() float64
-	predict() float64
-	addResult()
-	currentValues()
+	Predict() float64
+	AddResult()
+	CurrentValues()
 }
 
 type EloScriptPredictor struct {
@@ -39,12 +39,20 @@ func NewEloScriptPredictor() *EloScriptPredictor {
 	return &EloScriptPredictor{scores}
 }
 
-func (pred *EloScriptPredictor) currentValues() map[string]float64 {
+func (pred *EloScriptPredictor) CurrentValues() map[string]float64 {
 	return pred.currentValues()
 }
 
+func (pred *EloScriptPredictor) dampen() {
+	for i := range pred.current {
+		pred.current = 0.5*pred.current + 15
+	}
+}
+
+/*
 type RedPredictor struct{}
 
 func (pred *RedPredictor) currentValues() {
 	return
 }
+*/
