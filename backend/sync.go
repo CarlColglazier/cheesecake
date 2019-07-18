@@ -5,21 +5,9 @@ import (
 	"github.com/jackc/pgx"
 	"log"
 	"sync"
-	"time"
 )
 
-// This function is WAY too long.
-func reset(config *Config) {
-	sql := SQL_COMMAND
-	_, err := config.Conn.Exec(sql)
-	if err != nil {
-		// handle error.
-		log.Fatal(err)
-	}
-	teamList, err := config.Tba.GetAllTeams()
-	if err != nil {
-		log.Fatal(err)
-	}
+func (config *Config) insertTeams(teamList []Team) {
 	var teams [][]interface{}
 	for _, row := range teamList {
 		teams = append(teams, []interface{}{
@@ -34,36 +22,57 @@ func reset(config *Config) {
 		pgx.CopyFromRows(teams),
 	)
 	fmt.Println(copyCount)
-	time.Sleep(2 * time.Second)
-	var t int
-	err = config.Conn.QueryRow("SELECT COUNT('key') FROM team").Scan(&t)
-	if err != nil {
-		log.Fatal(err)
+}
+
+func (config *Config) insertEvents(eventList []Event) {
+	var r [][]interface{}
+	for _, row := range eventList {
+		r = append(r, []interface{}{row.EndDate, row.Key, row.Year})
 	}
-	fmt.Println(t)
+
+	_, err := config.Conn.CopyFrom(
+		pgx.Identifier{"event"},
+		[]string{"end_date", "key", "year"},
+		pgx.CopyFromRows(r),
+	)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func (config *Config) syncEvents() {
 	var wg sync.WaitGroup
 	for i := 2003; i <= 2019; i++ {
-		fmt.Println(i)
 		go func(year int) {
 			defer wg.Done()
 			rows, _ := config.Tba.GetAllEvents(year)
-
-			var r [][]interface{}
-			for _, row := range rows {
-				r = append(r, []interface{}{row.EndDate, row.Key, row.Year})
-			}
-
-			copyCount, _ := config.Conn.CopyFrom(
-				pgx.Identifier{"event"},
-				[]string{"end_date", "key", "year"},
-				pgx.CopyFromRows(r),
-			)
-			fmt.Println(copyCount)
+			config.insertEvents(rows)
 		}(i)
 
 		wg.Add(1)
 	}
 	wg.Wait()
+}
+
+/*
+func (config *Config) insertMatches(matchList []Match) {
+	return
+}
+*/
+
+func reset(config *Config) {
+	sql := SQL_COMMAND
+	_, err := config.Conn.Exec(sql)
+	if err != nil {
+		// handle error.
+		log.Fatal(err)
+	}
+	teamList, err := config.Tba.GetAllTeams()
+	if err != nil {
+		log.Fatal(err)
+	}
+	config.insertTeams(teamList)
+	config.syncEvents()
 	rows, _ := config.Tba.GetAllEventMatches(2019)
 	var r [][]interface{}
 	var a [][]interface{}
@@ -97,7 +106,7 @@ func reset(config *Config) {
 			row.Key,
 		})
 	}
-	copyCount, _ = config.Conn.CopyFrom(
+	copyCount, _ := config.Conn.CopyFrom(
 		pgx.Identifier{"match"},
 		[]string{
 			"key", "comp_level", "set_number", "match_number", "winning_alliance", "event_key",

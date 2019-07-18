@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
 	"github.com/mediocregopher/radix"
-	"io/ioutil"
 	"log"
 	"os"
 )
@@ -20,17 +18,6 @@ type Config struct {
 	Pool *radix.Pool
 	Conn *pgx.ConnPool
 	Tba  *TheBlueAlliance
-}
-
-// Not used right now?
-func ReadEloRecords() map[string]float64 {
-	file, err := ioutil.ReadFile("elo2018.json")
-	if err != nil {
-		log.Fatal("Could not read elo file ", err)
-	}
-	var records map[string]float64
-	_ = json.Unmarshal([]byte(file), &records)
-	return records
 }
 
 func main() {
