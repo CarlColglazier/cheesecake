@@ -3,15 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	// "github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
 	"github.com/mediocregopher/radix"
 	"io/ioutil"
 	"log"
-	// "net/http"
+	"net/http"
 	"os"
-	//"path/filepath"
 	"sync"
 	"time"
 )
@@ -24,11 +23,11 @@ type Config struct {
 	Tba  *TheBlueAlliance
 }
 
-/*
 func runServer(config Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/team/{key}", TeamReq)
+	router.HandleFunc("/reset", config.ResetReq)
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
@@ -41,7 +40,13 @@ func TeamReq(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Category: %v\n", vars["key"])
 }
-*/
+
+func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
+	reset(config)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Done")
+}
+
 func ReadEloRecords() map[string]float64 {
 	file, err := ioutil.ReadFile("elo2018.json")
 	if err != nil {
@@ -52,15 +57,7 @@ func ReadEloRecords() map[string]float64 {
 	return records
 }
 
-func reset(config Config) {
-	/*path := filepath.Join("sql", "create.sql")
-
-	c, ioErr := ioutil.ReadFile(path)
-	if ioErr != nil {
-		// handle error.
-		log.Fatal(ioErr)
-	}
-	sql := string(c)*/
+func reset(config *Config) {
 	sql := SQL_COMMAND
 	_, err := config.Conn.Exec(sql)
 	if err != nil {
@@ -195,11 +192,10 @@ func main() {
 	config := Config{Pool: pool, Conn: conn, Tba: tbaInst}
 	args := os.Args[1:]
 	if len(args) == 1 {
-		/*if args[0] == "server" {
+		if args[0] == "server" {
 			runServer(config)
-		} else*/
-		if args[0] == "reset" {
-			reset(config)
+		} else if args[0] == "reset" {
+			reset(&config)
 		}
 	}
 }
