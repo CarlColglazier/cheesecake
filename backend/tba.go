@@ -126,19 +126,16 @@ func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
 }
 
 func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
-	events, err := tba.tbaRequest(fmt.Sprintf("events/%d/keys", year))
+	events, err := tba.GetAllEvents(year)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
-
-	var eventStrings []string
-	err = json.Unmarshal([]byte(events), &eventStrings)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Println("len events ", len(events))
 	channel := make(chan []Match)
-	for _, key := range eventStrings {
-		url := fmt.Sprintf("event/%s/matches", key)
+	for _, event := range events {
+		fmt.Println(event.Key)
+		url := fmt.Sprintf("event/%s/matches", event.Key)
 		go func(url string) {
 			matchesString, _ := tba.tbaRequest(url)
 			var matchList []Match
@@ -147,7 +144,7 @@ func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
 		}(url)
 	}
 	var matchList []Match
-	for i := 0; i < len(eventStrings); i++ {
+	for i := 0; i < len(events); i++ {
 		matches := <-channel
 		matchList = append(matchList, matches...)
 	}
@@ -161,8 +158,14 @@ func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
 	}
 	var e []Event
 	err = json.Unmarshal([]byte(events), &e)
-	//fmt.Println(e)
-	return e, err
+	// Keep only official events.
+	var eventSlice []Event
+	for i := range e {
+		if e[i].EventType >= 0 && e[i].EventType <= 6 {
+			eventSlice = append(eventSlice, e[i])
+		}
+	}
+	return eventSlice, err
 }
 
 func (tba *TheBlueAlliance) Close() {

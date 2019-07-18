@@ -57,7 +57,7 @@ type Event struct {
 	} `json:"webcasts"`
 	ParentEventKey    string `json:"parent_event_key"`
 	PlayoffType       int    `json:"playoff_type"`
-	PlayoffTypeString int    `json:"playoff_type_string"`
+	PlayoffTypeString string `json:"playoff_type_string"`
 }
 
 type Award struct {

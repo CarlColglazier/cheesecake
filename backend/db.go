@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/jackc/pgx"
+	"os"
 )
 
 func Connect(applicationName string) (conn *pgx.ConnPool) {
