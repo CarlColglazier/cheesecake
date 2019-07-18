@@ -11,7 +11,7 @@ import (
 	"log"
 	// "net/http"
 	"os"
-	"path/filepath"
+	//"path/filepath"
 	"sync"
 	"time"
 )
@@ -53,14 +53,15 @@ func ReadEloRecords() map[string]float64 {
 }
 
 func reset(config Config) {
-	path := filepath.Join("sql", "create.sql")
+	/*path := filepath.Join("sql", "create.sql")
 
 	c, ioErr := ioutil.ReadFile(path)
 	if ioErr != nil {
 		// handle error.
 		log.Fatal(ioErr)
 	}
-	sql := string(c)
+	sql := string(c)*/
+	sql := SQL_COMMAND
 	_, err := config.Conn.Exec(sql)
 	if err != nil {
 		// handle error.
