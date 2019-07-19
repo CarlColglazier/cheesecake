@@ -5,9 +5,10 @@ import (
 	"github.com/jackc/pgx"
 	"log"
 	"sync"
+	"tba"
 )
 
-func (config *Config) insertTeams(teamList []Team) {
+func (config *Config) insertTeams(teamList []tba.Team) {
 	var teams [][]interface{}
 	for _, row := range teamList {
 		teams = append(teams, []interface{}{
@@ -24,7 +25,7 @@ func (config *Config) insertTeams(teamList []Team) {
 	fmt.Println(copyCount)
 }
 
-func (config *Config) insertEvents(eventList []Event) {
+func (config *Config) insertEvents(eventList []tba.Event) {
 	var r [][]interface{}
 	for _, row := range eventList {
 		r = append(r, []interface{}{row.EndDate, row.Key, row.Year})

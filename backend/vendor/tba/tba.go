@@ -1,4 +1,4 @@
-package main
+package tba
 
 import (
 	"encoding/json"

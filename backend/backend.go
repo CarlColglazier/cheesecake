@@ -6,6 +6,7 @@ import (
 	"github.com/mediocregopher/radix"
 	"log"
 	"os"
+	"tba"
 )
 
 const POOLS = 2
@@ -17,7 +18,7 @@ const POOLS = 2
 type Config struct {
 	Pool *radix.Pool
 	Conn *pgx.ConnPool
-	Tba  *TheBlueAlliance
+	Tba  *tba.TheBlueAlliance
 }
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 	conn := Connect("cheesecake")
 	defer pool.Close()
 	tbakey := os.Getenv("TBA_KEY")
-	tbaInst := NewTba(tbakey, pool)
+	tbaInst := tba.NewTba(tbakey, pool)
 	defer tbaInst.Close()
 	if err != nil {
 		log.Fatal(err)

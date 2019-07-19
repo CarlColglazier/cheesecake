@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"math"
 )
 
 func ReadEloRecords() (map[string]float64, error) {
-	file, err := ioutil.ReadFile("elo2018.json")
+	file, err := ioutil.ReadFile("backend/elo2018.json")
 	if err != nil {
 		return nil, err
 	}
@@ -21,9 +22,9 @@ func ReadEloRecords() (map[string]float64, error) {
 
 type Predictor interface {
 	//predictMatch() float64
-	Predict() float64
-	AddResult()
-	CurrentValues()
+	Predict(MatchEntry) float64
+	AddResult(MatchEntry)
+	CurrentValues() map[string]float64
 }
 
 type EloScriptPredictor struct {
@@ -40,19 +41,48 @@ func NewEloScriptPredictor() *EloScriptPredictor {
 }
 
 func (pred *EloScriptPredictor) CurrentValues() map[string]float64 {
-	return pred.currentValues()
+	return pred.current
 }
 
 func (pred *EloScriptPredictor) dampen() {
-	for i := range pred.current {
-		pred.current = 0.5*pred.current + 15
+	for k, v := range pred.current {
+		pred.current[k] = 0.5*v + 15
 	}
 }
 
-/*
-type RedPredictor struct{}
-
-func (pred *RedPredictor) currentValues() {
-	return
+func (pred *EloScriptPredictor) Predict(me MatchEntry) float64 {
+	elos := make(map[string]float64)
+	for key, val := range me.Alliances {
+		for i := range val.Teams {
+			teamKey := val.Teams[i]
+			elos[key] += pred.current[teamKey]
+		}
+		elos[key] /= float64(len(val.Teams))
+	}
+	red := elos["red"]
+	blue := elos["blue"]
+	return 1.0 / (1 + math.Pow(10, blue-red/400))
 }
-*/
+
+func (pred *EloScriptPredictor) AddResult(me MatchEntry) {
+	prediction := pred.Predict(me)
+	var actual int
+	if me.Match.WinningAlliance == "red" {
+		actual = 1
+	}
+	diff := float64(actual) - prediction
+	k := 12.0
+	for key, val := range me.Alliances {
+		for i := range val.Teams {
+			teamKey := val.Teams[i]
+			if _, ok := pred.current[teamKey]; !ok {
+				pred.current[teamKey] = 0.0
+			}
+			if key == "red" {
+				pred.current[teamKey] += k * diff
+			} else { //if key == "blue" {
+				pred.current[teamKey] -= k * diff
+			}
+		}
+	}
+}
