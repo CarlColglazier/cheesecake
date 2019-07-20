@@ -40,8 +40,17 @@ func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	pred := NewEloScriptPredictor()
+	pred := NewEloScorePredictor()
 	for _, match := range matches {
+		/*
+			defer func() {
+				fmt.Println("Could not add match result")
+				if r := recover(); r != nil {
+					fmt.Printf("Panic: %+v\n", r)
+				}
+				json.NewEncoder(w).Encode(pred.CurrentValues())
+			}()
+		*/
 		pred.AddResult(match)
 	}
 	json.NewEncoder(w).Encode(pred.CurrentValues())

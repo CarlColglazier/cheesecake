@@ -1,5 +1,7 @@
 package main
 
+import "github.com/pkg/errors"
+
 type Match struct {
 	Key             string `db:"key"`
 	CompLevel       string `db:"comp_level"`
@@ -30,6 +32,16 @@ type AllianceEntry struct {
 type MatchEntry struct {
 	Match     Match
 	Alliances map[string]*AllianceEntry
+}
+
+func (me *MatchEntry) Diff() (int, error) {
+	if _, ok := me.Alliances["red"]; !ok {
+		return 0, errors.New("No red alliance")
+	}
+	if _, ok := me.Alliances["blue"]; !ok {
+		return 0, errors.New("No blue alliance")
+	}
+	return me.Alliances["red"].Alliance.Score - me.Alliances["blue"].Alliance.Score, nil
 }
 
 func (config *Config) getMatches() (map[string]MatchEntry, error) {
