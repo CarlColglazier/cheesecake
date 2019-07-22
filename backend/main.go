@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
-	"github.com/mediocregopher/radix"
+	"github.com/mediocregopher/radix/v3"
 	"log"
 	"os"
 	"tba"
