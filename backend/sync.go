@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
 	"log"
 	"sync"
-	"tba"
 )
 
 func (config *Config) insertTeams(teamList []tba.Team) {

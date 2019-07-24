@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
 	"github.com/mediocregopher/radix/v3"
 	"log"
 	"os"
-	"tba"
 )
 
 const POOLS = 2

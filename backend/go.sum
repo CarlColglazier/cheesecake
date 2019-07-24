@@ -2,6 +2,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20190722114114-05cf89a04616 h1:5e7046H4FB5I7RF7zqGcDlYGyA15RSXlmIaFdfSqHo0=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20190722114114-05cf89a04616/go.mod h1:ktZiWwVMfdqsHIOHMwkL1uLhRdYds9qFl3uo848TC9M=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20190724185551-a173c67442b4 h1:U80s1zAxlsxuu9F2VFi9hGWiw5MAqpbqN6WwriCURIc=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20190724185551-a173c67442b4/go.mod h1:xrDwQgf4jFw25b3+mmVRj7kr50ufPjuMwpL/59HqwUU=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

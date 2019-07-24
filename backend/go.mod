@@ -3,7 +3,7 @@ module github.com/carlcolglazier/cheesecake/backend
 go 1.12
 
 require (
-	github.com/carlcolglazier/cheesecake/tba v0.0.0-20190722114114-05cf89a04616 // indirect
+	github.com/carlcolglazier/cheesecake/tba v0.0.0-20190724185551-a173c67442b4
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
