@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mediocregopher/radix"
+	"github.com/mediocregopher/radix/v3"
 	"io/ioutil"
 	"log"
 	"net/http"
