@@ -15,9 +15,17 @@ module.exports = {
     'plugin:nuxt/recommended'
   ],
   plugins: [
-    'prettier'
+		'prettier'
   ],
-  // add your custom rules here
   rules: {
+			'indent': [2, 'tab', { 'SwitchCase': 1, 'VariableDeclarator': 1 }],
+			'no-tabs': 0,
+			'vue/html-indent': ['error', 'tab', {
+					'attribute': 1,
+					'baseIndent': 1,
+					'closeBracket': 0,
+					'alignAttributesVertically': true,
+					'ignores': []
+			}]
   }
 }

@@ -45,7 +45,11 @@ func (me *MatchEntry) Diff() (int, error) {
 }
 
 func (config *Config) getMatches() (map[string]MatchEntry, error) {
-	rows, err := config.Conn.Query(`SELECT * FROM match JOIN alliance on (match.key = alliance.match_key) JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)`)
+	rows, err := config.Conn.Query(`SELECT * FROM match
+JOIN alliance on (match.key = alliance.match_key)
+JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+where match.event_key like '2019%'
+--order by actual_time ASC, time ASC`)
 	if err != nil {
 		return nil, err
 	}

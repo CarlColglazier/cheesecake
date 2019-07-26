@@ -10,7 +10,7 @@ import (
 )
 
 func ReadEloRecords() (map[string]float64, error) {
-	file, err := ioutil.ReadFile("backend/elo2018.json")
+	file, err := ioutil.ReadFile("elo2018.json")
 	if err != nil {
 		return nil, err
 	}
