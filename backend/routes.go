@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/mediocregopher/radix/v3"
 	"log"
 	"net/http"
 )
@@ -36,13 +37,23 @@ func (config *Config) MatchReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
-	matches, err := config.getMatches()
-	if err != nil {
-		log.Println(err)
+	var s []byte
+	err := config.Pool.Do(radix.Cmd(&s, "GET", "EloRating"))
+	if err != nil || len(s) == 0 {
+		log.Println("Could not fetch scores from cache. Calculating...")
+		matches, err := config.getMatches()
+		if err != nil {
+			log.Println(err)
+		}
+		pred := NewEloScorePredictor()
+		for _, match := range matches {
+			pred.AddResult(match)
+		}
+		json.NewEncoder(w).Encode(pred.CurrentValues())
+		j, _ := json.Marshal(pred.CurrentValues())
+		config.Pool.Do(radix.Cmd(nil, "SET", "EloRating", fmt.Sprintf("%s", j)))
+		return
 	}
-	pred := NewEloScorePredictor()
-	for _, match := range matches {
-		pred.AddResult(match)
-	}
-	json.NewEncoder(w).Encode(pred.CurrentValues())
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(s)
 }
