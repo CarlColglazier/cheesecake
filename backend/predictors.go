@@ -101,22 +101,33 @@ func NewEloScorePredictor() *EloScorePredictor {
 	return &EloScorePredictor{scores}
 }
 
+func (pred *EloScorePredictor) Dampen() {
+	for k, v := range pred.current {
+		pred.current[k] = 0.5*v + 15
+	}
+}
+
 func (pred *EloScorePredictor) CurrentValues() map[string]float64 {
 	return pred.current
 }
 
 func (pred *EloScorePredictor) Predict(me MatchEntry) float64 {
 	elos := make(map[string]float64)
+	elos["red"] = 0.0
+	elos["blue"] = 0.0
 	for key, val := range me.Alliances {
 		for i := range val.Teams {
 			teamKey := val.Teams[i]
+			if _, ok := pred.current[teamKey]; !ok {
+				pred.current[teamKey] = 0.0
+			}
 			elos[key] += pred.current[teamKey]
 		}
 		elos[key] /= float64(len(val.Teams))
 	}
 	red := elos["red"]
 	blue := elos["blue"]
-	return 1.0 / (1 + math.Pow(10, blue-red/400))
+	return 1.0 / (1 + math.Pow(10, (blue-red)/400))
 }
 
 func (pred *EloScorePredictor) AddResult(me MatchEntry) {

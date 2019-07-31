@@ -86,6 +86,11 @@ func reset(config *Config) {
 			row.MatchNumber,
 			row.WinningAlliance,
 			row.EventKey,
+			row.Time,
+			row.ActualTime,
+			row.PredictedTime,
+			row.PostResultTime,
+			row.ScoreBreakdown,
 		})
 		a = append(a, []interface{}{
 			row.Key + "_blue",
@@ -106,11 +111,20 @@ func reset(config *Config) {
 			"red",
 			row.Key,
 		})
+		for _, team := range row.Alliances.Red.TeamKeys {
+			aTeams = append(aTeams,
+				[]interface{}{
+					row.Key + "_red",
+					team,
+				})
+		}
 	}
 	copyCount, _ := config.Conn.CopyFrom(
 		pgx.Identifier{"match"},
 		[]string{
-			"key", "comp_level", "set_number", "match_number", "winning_alliance", "event_key",
+			"key", "comp_level", "set_number", "match_number",
+			"winning_alliance", "event_key", "time", "actual_time",
+			"predicted_time", "post_result_time", "score_breakdown",
 		},
 		pgx.CopyFromRows(r),
 	)

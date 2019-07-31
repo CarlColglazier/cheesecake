@@ -90,16 +90,17 @@ type Match struct {
 			TeamKeys       []string `json:"team_keys"`
 		} `json:"red"`
 	} `json:"alliances"`
-	WinningAlliance string `json:"winning_alliance"`
-	EventKey        string `json:"event_key"`
-	Time            int64  `json:"time"`
-	ActualTime      int64  `json:"actual_time"`
-	PredictedTime   int64  `json:"predicted_time"`
-	PostResultTime  int64  `json:"post_result_time"`
-	ScoreBreakdown  struct {
-		Red  interface{} `json:"red"`
-		Blue interface{} `json:"blue"`
-	} `json:"score_breakdown"`
+	WinningAlliance string                 `json:"winning_alliance"`
+	EventKey        string                 `json:"event_key"`
+	Time            int64                  `json:"time"`
+	ActualTime      int64                  `json:"actual_time"`
+	PredictedTime   int64                  `json:"predicted_time"`
+	PostResultTime  int64                  `json:"post_result_time"`
+	ScoreBreakdown  map[string]interface{} `json:"score_breakdown"`
+	//ScoreBreakdown  struct {
+	//	Red  interface{} `json:"red"`
+	//	Blue interface{} `json:"blue"`
+	//} `json:"score_breakdown"`
 	Videos []struct {
 		Type string `json:"type"`
 		Key  string `json:"key"`

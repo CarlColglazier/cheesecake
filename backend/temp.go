@@ -62,11 +62,11 @@ CREATE TABLE "match" (
  	match_number int4 NULL,
  	winning_alliance varchar(5) NULL,
  	event_key varchar(25) NULL,
--- 	"time" int4 NULL,
--- 	actual_time int4 NULL,
--- 	predicted_time int4 NULL,
--- 	post_result_time int4 NULL,
--- 	score_breakdown json NULL,
+ 	"time" int4 NULL,
+ 	actual_time int4 NULL,
+ 	predicted_time int4 NULL,
+ 	post_result_time int4 NULL,
+ 	score_breakdown json NULL,
  	CONSTRAINT match_pkey PRIMARY KEY (key),
  	CONSTRAINT match_event_key_fkey FOREIGN KEY (event_key) REFERENCES event(key)
 );

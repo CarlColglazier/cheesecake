@@ -5,6 +5,12 @@
 				<v-card-title class="title">
 					Welcome to Cheesecake
 				</v-card-title>
+				<v-card-text>
+					<p>
+						Cheesecake is an evidence-based approach to FRC predictions and
+						scouting.
+					</p>
+				</v-card-text>
 			</v-card>
 		</v-flex>
 		<v-flex xs12 sm6>
@@ -12,6 +18,13 @@
 				<v-card-title class="title">
 					Events
 				</v-card-title>
+				<v-card-text>
+					<ul>
+						<li v-for="event in events" :key="event.Key">
+							{{ event.Key }}
+						</li>
+					</ul>
+				</v-card-text>
 			</v-card>
 		</v-flex>
 		<v-flex xs12 sm6>
@@ -22,7 +35,7 @@
 				<v-card-text>
 					<ol id="v-for-object">
 						<li v-for="(rating, index) in ratings.slice(0, 50)" :key="index">
-							{{ rating.team }}
+							{{ rating.team }} ({{ rating.score }})
 						</li>
 					</ol>
 				</v-card-text>
@@ -44,7 +57,8 @@ export default {
 		values.sort((a, b) => {
 			return b.score - a.score
 		})
-		return { ratings: values }
+		const res = await axios.get('http://localhost:8080/events')
+		return { ratings: values, events: res.data }
 	}
 }
 </script>
