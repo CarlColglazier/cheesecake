@@ -68,13 +68,12 @@ func (config *Config) getMatches() ([]MatchEntry, error) {
 	rows, err := config.Conn.Query(`SELECT * FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-where match.event_key like '2019%'
---order by actual_time ASC, time ASC`)
+where match.event_key like '2019%'`)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	matches := make(map[string]MatchEntry)
-	//var keys []string
 	for rows.Next() {
 		var match Match
 		var alliance Alliance
@@ -99,23 +98,21 @@ where match.event_key like '2019%'
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
 		)
+		// temp: This takes up too much memory.
+		match.ScoreBreakdown = nil
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
 			matches[match.Key] = MatchEntry{match, dict}
 		}
-		if _, ok := matches[match.Key].Alliances[alliance.Color]; !ok {
+		key := match.Key
+		if _, ok := matches[key].Alliances[alliance.Color]; !ok {
 			list := make([]string, 0)
-			matches[match.Key].Alliances[alliance.Color] = &AllianceEntry{alliance, list}
+			matches[key].Alliances[alliance.Color] = &AllianceEntry{alliance, list}
 		}
-		matches[match.Key].Alliances[alliance.Color].Teams = append(
-			matches[match.Key].Alliances[alliance.Color].Teams,
+		matches[key].Alliances[alliance.Color].Teams = append(
+			matches[key].Alliances[alliance.Color].Teams,
 			aTeam.TeamKey,
 		)
-		/*
-			if len(keys) == 0 || keys[len(keys)-1] != match.Key {
-				keys = append(keys, match.Key)
-			}
-		*/
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
@@ -133,6 +130,7 @@ where match.event_key like '2019%'
 func (config *Config) getEvents() ([]Event, error) {
 	rows, err := config.Conn.Query(`SELECT key FROM event
 where event.key like '2019%'`)
+	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}

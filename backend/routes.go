@@ -55,6 +55,7 @@ func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Println(err)
 		}
+		log.Println(len(matches))
 		pred := NewEloScorePredictor()
 		pred.Dampen()
 		var predictions [][]interface{}
