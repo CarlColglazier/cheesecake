@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx"
 	"os"
+	"time"
 )
 
 func Connect(applicationName string) (conn *pgx.ConnPool) {
@@ -13,7 +14,7 @@ func Connect(applicationName string) (conn *pgx.ConnPool) {
 	connConfig := pgx.ConnConfig{
 		User:              "postgres",
 		Password:          "postgres",
-		Host:              "localhost",
+		Host:              "db",
 		Port:              5432,
 		Database:          "postgres",
 		TLSConfig:         nil,
@@ -22,10 +23,18 @@ func Connect(applicationName string) (conn *pgx.ConnPool) {
 		RuntimeParams:     runtimeParams,
 	}
 	connPoolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 8}
-	conn, err := pgx.NewConnPool(connPoolConfig)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
-		os.Exit(1)
+	errors := 0
+	for errors < 10 {
+		conn, err := pgx.NewConnPool(connPoolConfig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
+			time.Sleep(2000 * time.Millisecond)
+			errors += 1
+		} else {
+			return conn
+		}
+
 	}
-	return conn
+	os.Exit(1)
+	return nil
 }

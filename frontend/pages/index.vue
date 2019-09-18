@@ -49,7 +49,7 @@ import axios from 'axios'
 export default {
 	layout: 'default',
 	async asyncData() {
-		const { data } = await axios.get('http://localhost:8080/elo')
+		const { data } = await axios.get('http://backend:8080/elo')
 		const values = []
 		for (const [key, value] of Object.entries(data)) {
 			values.push({ team: key, score: value })
@@ -57,7 +57,7 @@ export default {
 		values.sort((a, b) => {
 			return b.score - a.score
 		})
-		const res = await axios.get('http://localhost:8080/events')
+		const res = await axios.get('http://backend:8080/events')
 		return { ratings: values, events: res.data }
 	}
 }

@@ -1,0 +1,43 @@
+version: '3'
+services:
+  backend:
+    build: "./backend/"
+    ports:
+      - 8080:8080
+    depends_on:
+      - "redis"
+      - "db"
+    networks:
+      - ck
+  frontend:
+    build: "./frontend/"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - "backend"
+    networks:
+      - ck
+  redis:
+    image: "redis:alpine"
+    networks:
+      - ck
+  db:
+    image: postgres:11.0-alpine
+    ports:
+      - 5432:5432
+    networks:
+      - ck
+    volumes:
+      - pg_data:/var/lib/postgresql/data/pg_data
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      PGDATA: /var/lib/postgresql/data/pg_data
+networks:
+  ck:
+    driver: bridge
+volumes:
+  pg_data:
