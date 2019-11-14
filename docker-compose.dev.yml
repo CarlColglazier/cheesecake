@@ -1,0 +1,12 @@
+version: '3'
+services:
+  backend:
+    build: 
+      context: "./backend/"
+      dockerfile: Dockerfile-dev
+    volumes:
+      - ./backend:/cheesecake
+  frontend:
+    command: npm run dev
+    volumes:
+      - ./frontend:/usr/src/nuxt-app

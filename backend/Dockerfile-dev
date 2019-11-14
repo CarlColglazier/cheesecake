@@ -1,0 +1,17 @@
+FROM golang:1.13
+
+ADD . /cheesecake
+
+WORKDIR /cheesecake
+
+RUN go get -v ./...
+
+RUN ["go", "get", "github.com/githubnemo/CompileDaemon"]
+
+RUN go build
+
+# ENTRYPOINT ["backend", "server"]
+
+ENTRYPOINT CompileDaemon -log-prefix=false -build="go build" -command="./backend server"
+
+EXPOSE 8080

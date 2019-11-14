@@ -21,7 +21,7 @@ func runServer(config Config) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome!")
+	fmt.Fprintln(w, `{status: "good"}`)
 }
 
 func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
