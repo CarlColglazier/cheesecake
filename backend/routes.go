@@ -17,7 +17,6 @@ func runServer(config Config) {
 	router.HandleFunc("/matches", config.MatchReq)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/reset", config.ResetReq)
-	router.HandleFunc("/train", config.TrainReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
 	handler := cors.Default().Handler(router)
@@ -31,12 +30,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
 	reset(config)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Done")
-}
-
-func (config *Config) TrainReq(w http.ResponseWriter, r *http.Request) {
-	train(config)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Done")
 }
