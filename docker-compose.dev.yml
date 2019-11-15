@@ -7,6 +7,6 @@ services:
     volumes:
       - ./backend:/cheesecake
   frontend:
-    command: npm run dev
+    command: yarn run dev
     volumes:
       - ./frontend:/usr/src/nuxt-app

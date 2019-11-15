@@ -28,12 +28,12 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 func (config *Config) insertEvents(eventList []tba.Event) {
 	var r [][]interface{}
 	for _, row := range eventList {
-		r = append(r, []interface{}{row.EndDate, row.Key, row.Year})
+		r = append(r, []interface{}{row.EndDate, row.Key, row.ShortName, row.Year})
 	}
 
 	_, err := config.Conn.CopyFrom(
 		pgx.Identifier{"event"},
-		[]string{"end_date", "key", "year"},
+		[]string{"end_date", "key", "short_name", "year"},
 		pgx.CopyFromRows(r),
 	)
 	if err != nil {

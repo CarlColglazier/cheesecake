@@ -6,24 +6,26 @@
 					Welcome to Cheesecake
 				</v-card-title>
 				<v-card-text>
-					<p>
-						Cheesecake is an evidence-based approach to FRC predictions and
-						scouting.
-					</p>
+					Cheesecake is an evidence-based approach to FRC predictions and
+					scouting.
 				</v-card-text>
 			</v-card>
 		</v-flex>
 		<v-flex xs12 sm6>
-			<v-card>
+			<v-card class="mx-auto" tile>
 				<v-card-title class="title">
 					Events
 				</v-card-title>
 				<v-card-text>
-					<ul>
-						<li v-for="event in events" :key="event.Key">
-							{{ event.Key }}
-						</li>
-					</ul>
+					<v-list>
+						<v-list-item v-for="event in events" :key="event.Key">
+							<v-list-item-title>
+								<nuxt-link :to="'/event/' + event.Key">
+									{{ event.ShortName }}
+								</nuxt-link>
+							</v-list-item-title>
+						</v-list-item>
+					</v-list>
 				</v-card-text>
 			</v-card>
 		</v-flex>
@@ -45,11 +47,11 @@
 </template>
 
 <script>
-import axios from 'axios'
+import axios from '~/plugins/axios'
 export default {
 	layout: 'default',
 	async asyncData() {
-		const { data } = await axios.get('http://backend:8080/elo')
+		const { data } = await axios.get('/elo')
 		const values = []
 		for (const [key, value] of Object.entries(data)) {
 			values.push({ team: key, score: value })
@@ -57,7 +59,7 @@ export default {
 		values.sort((a, b) => {
 			return b.score - a.score
 		})
-		const res = await axios.get('http://backend:8080/events')
+		const res = await axios.get('/events')
 		return { ratings: values, events: res.data }
 	}
 }

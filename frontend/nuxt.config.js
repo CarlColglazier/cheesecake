@@ -51,7 +51,10 @@ export default {
    ** Axios module configuration
    ** See https://axios.nuxtjs.org/options
    */
-  axios: {},
+  axios: {
+    baseURL: "http://backend:8080/",
+    browserBaseURL: process.env.BASE_URL || "http://localhost:8080/",
+  },
   /*
    ** vuetify module configuration
    ** https://github.com/nuxt-community/vuetify-module

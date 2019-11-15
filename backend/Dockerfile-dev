@@ -6,9 +6,9 @@ WORKDIR /cheesecake
 
 RUN go get -v ./...
 
-RUN ["go", "get", "github.com/githubnemo/CompileDaemon"]
-
 RUN go build
+
+RUN ["go", "get", "github.com/githubnemo/CompileDaemon"]
 
 # ENTRYPOINT ["backend", "server"]
 

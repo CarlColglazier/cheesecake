@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx"
 	"github.com/mediocregopher/radix/v3"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 )
@@ -14,20 +15,32 @@ func runServer(config Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/matches", config.MatchReq)
+	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/reset", config.ResetReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
-	log.Fatal(http.ListenAndServe(":8080", router))
+	handler := cors.Default().Handler(router)
+	//log.Fatal(http.ListenAndServe(":8080", router), c.Handler(router))
+	http.ListenAndServe(":8080", handler)
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, `{status: "good"}`)
+	fmt.Fprintln(w, `{status: "good 1"}`)
 }
 
 func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
 	reset(config)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Done")
+}
+
+func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	matches, err := config.getEventMatches(vars["event"])
+	if err != nil {
+		log.Println(err)
+	}
+	json.NewEncoder(w).Encode(matches)
 }
 
 func (config *Config) MatchReq(w http.ResponseWriter, r *http.Request) {

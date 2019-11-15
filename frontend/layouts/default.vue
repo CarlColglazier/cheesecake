@@ -1,13 +1,14 @@
 <template>
 	<v-app>
-		<v-navigation-drawer v-model="drawer" app>
-			<!-- -->
-		</v-navigation-drawer>
-		<v-toolbar app color="yellow">
-			<v-toolbar-side-icon @click="drawer = !drawer" />
-			<v-toolbar-title>Cheesecake</v-toolbar-title>
+		<!--<v-navigation-drawer v-model="drawer" app>
+		</v-navigation-drawer>-->
+		<v-app-bar>
+			<!--<v-toolbar-side-icon @click="drawer = !drawer" />-->
+			<nuxt-link to="/">
+				<v-toolbar-title>Cheesecake</v-toolbar-title>
+			</nuxt-link>
 			<v-spacer />
-		</v-toolbar>
+		</v-app-bar>
 		<!-- Sizes your content based upon application components -->
 		<v-content>
 			<!-- Provides the application the proper gutter -->

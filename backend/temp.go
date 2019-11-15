@@ -29,7 +29,7 @@ CREATE TABLE "event" (
 --	playoff_type int4 NULL,
 --	playoff_type_string varchar(100) NULL,
 --	postal_code varchar(50) NULL,
---	short_name varchar(250) NULL,
+	short_name varchar(250) NULL,
 --	start_date varchar(10) NULL,
 --	state_prov varchar(50) NULL,
 --	timezone varchar(50) NULL,

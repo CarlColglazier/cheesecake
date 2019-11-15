@@ -13,6 +13,7 @@ require (
 	github.com/lib/pq v1.2.0 // indirect
 	github.com/mediocregopher/radix/v3 v3.3.1
 	github.com/pkg/errors v0.8.1
+	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24 // indirect
 	golang.org/x/exp v0.0.0-20190718202018-cfdd5522f6f6
