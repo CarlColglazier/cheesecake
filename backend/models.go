@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx"
 	"github.com/pkg/errors"
+	"gopkg.in/guregu/null.v3"
 	"os"
 	"sort"
 	"time"
@@ -74,16 +75,16 @@ type AllianceEntry struct {
 }
 
 type MatchEntry struct {
-	Match       *Match                    `json:"match"`
-	Alliances   map[string]*AllianceEntry `json:"alliances"`
-	Predictions map[string]float64        `json:"predictions"`
+	Match       *Match                        `json:"match"`
+	Alliances   map[string]*AllianceEntry     `json:"alliances"`
+	Predictions map[string]*PredictionHistory `json:"predictions"`
 }
 
 type PredictionHistory struct {
 	//Key        int     `db:"key"`
-	Match      string  `db:"match"`
-	Prediction float64 `db:"prediction"`
-	Model      string  `db:"model"`
+	//Match      string          `db:"match" json:"match"`
+	Prediction null.Float `db:"prediction" json:"prediction"`
+	//Model      string          `db:"model" json:"model"`
 }
 
 type Event struct {
@@ -109,7 +110,7 @@ func (config *Config) getEventMatches(event string) ([]MatchEntry, error) {
 		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'EloScore'
+LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'elo_score'
 where match.event_key = '` + event + `'`)
 
 	if err != nil {
@@ -121,7 +122,7 @@ where match.event_key = '` + event + `'`)
 		var match Match
 		var alliance Alliance
 		var aTeam AllianceTeam
-		eloScorePrediction := 0.0
+		var prediction PredictionHistory
 		rows.Scan(
 			&match.Key,
 			&match.CompLevel,
@@ -141,13 +142,13 @@ where match.event_key = '` + event + `'`)
 			&aTeam.Position,
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
-			&eloScorePrediction,
+			&prediction.Prediction,
 		)
 		// temp: This takes up too much memory.
 		//match.ScoreBreakdown = nil
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
-			preds := make(map[string]float64)
+			preds := make(map[string]*PredictionHistory)
 			matches[match.Key] = MatchEntry{&match, dict, preds}
 		}
 		key := match.Key
@@ -159,7 +160,14 @@ where match.event_key = '` + event + `'`)
 			matches[key].Alliances[alliance.Color].Teams,
 			aTeam.TeamKey,
 		)
-		matches[key].Predictions["EloScore"] = eloScorePrediction
+		//prediction.Model = "EloScore"
+		matches[key].Predictions["elo_score"] = &prediction
+		//var score float64
+		//if err := prediction.Prediction.Scan(&score); !err {
+		//	matches[key].Predictions["EloScore"] =
+		//}/ else {
+		//	return nil, err
+		//}
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
@@ -212,7 +220,7 @@ where match.event_key like '2019%'`)
 		match.ScoreBreakdown = nil
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
-			preds := make(map[string]float64)
+			preds := make(map[string]*PredictionHistory)
 			matches[match.Key] = MatchEntry{&match, dict, preds}
 		}
 		key := match.Key

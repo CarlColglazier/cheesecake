@@ -53,7 +53,7 @@
 							{{ d.alliances.red.alliance.score }}
 						</span>
 						<span class="break">
-							{{ displayPrediction(d.predictions.EloScore) }}
+							{{ displayPrediction(d.predictions.elo_score.prediction, 'red') }}
 						</span>
 					</td>
 					<td>
@@ -61,7 +61,9 @@
 							{{ d.alliances.blue.alliance.score }}
 						</span>
 						<span class="break">
-							{{ displayPrediction(1 - d.predictions.EloScore) }}
+							{{
+								displayPrediction(d.predictions.elo_score.prediction, 'blue')
+							}}
 						</span>
 					</td>
 					<td>
@@ -106,7 +108,13 @@ function rankPoints(input) {
 	return ''
 }
 
-function prediction(num) {
+function prediction(num, color) {
+	if (num === null) {
+		return ''
+	}
+	if (color === 'blue') {
+		num = 1 - num
+	}
 	const percent = Math.round((num - 0.5) * 100)
 	if (percent > 0) {
 		return `(${Math.round(num * 100)}%)`

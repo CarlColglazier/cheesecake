@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/jackc/pgx"
-	"github.com/mediocregopher/radix/v3"
 	"github.com/rs/cors"
 	"log"
 	"net/http"
@@ -60,34 +58,10 @@ func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
-	var s []byte
-	err := config.Pool.Do(radix.Cmd(&s, "GET", "EloRating"))
-	if err != nil || len(s) == 0 {
-		log.Println("Could not fetch scores from cache. Calculating...")
-		matches, err := config.getMatches()
-		if err != nil {
-			log.Println(err)
-		}
-		log.Println(len(matches))
-		pred := NewEloScorePredictor()
-		pred.Dampen()
-		var predictions [][]interface{}
-		for _, match := range matches {
-			p := pred.Predict(match)
-			//ph := PredictionHistory{match.Match.Key, p, "EloScore"}
-			predictions = append(predictions, []interface{}{match.Match.Key, p, "EloScore"})
-			pred.AddResult(match)
-		}
-		config.Conn.CopyFrom(
-			pgx.Identifier{"prediction_history"},
-			[]string{"match", "prediction", "model"},
-			pgx.CopyFromRows(predictions),
-		)
-		json.NewEncoder(w).Encode(pred.CurrentValues())
-		j, _ := json.Marshal(pred.CurrentValues())
-		config.Pool.Do(radix.Cmd(nil, "SET", "EloRating", fmt.Sprintf("%s", j)))
-		return
+	j, err := calculateElo(config)
+	if err != nil {
+		log.Println(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(s)
+	w.Write(j)
 }

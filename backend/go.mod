@@ -20,4 +20,5 @@ require (
 	golang.org/x/xerrors v0.0.0-20190528162220-0421b64034aa
 	gonum.org/v1/gonum v0.0.0-20190722055728-89197710bda2
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/guregu/null.v3 v3.4.0
 )

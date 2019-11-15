@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
+	"github.com/mediocregopher/radix/v3"
 	"log"
 	"sync"
 )
@@ -55,11 +57,36 @@ func (config *Config) syncEvents() {
 	wg.Wait()
 }
 
-/*
-func (config *Config) insertMatches(matchList []Match) {
-	return
+func calculateElo(config *Config) ([]byte, error) {
+	var s []byte
+	err := config.Pool.Do(radix.Cmd(&s, "GET", "EloRating"))
+	if err != nil || len(s) == 0 {
+		log.Println("Could not fetch scores from cache. Calculating...")
+		matches, err := config.getMatches()
+		if err != nil {
+			return nil, err
+		}
+		log.Println(len(matches))
+		pred := NewEloScorePredictor()
+		pred.Dampen()
+		var predictions [][]interface{}
+		for _, match := range matches {
+			p := pred.Predict(match)
+			predictions = append(predictions, []interface{}{match.Match.Key, p, "elo_score"})
+			pred.AddResult(match)
+		}
+		config.Conn.CopyFrom(
+			pgx.Identifier{"prediction_history"},
+			[]string{"match", "prediction", "model"},
+			pgx.CopyFromRows(predictions),
+		)
+		//json.NewEncoder(w).Encode(pred.CurrentValues())
+		j, _ := json.Marshal(pred.CurrentValues())
+		config.Pool.Do(radix.Cmd(nil, "SET", "EloRating", fmt.Sprintf("%s", j)))
+		return j, nil
+	}
+	return s, nil
 }
-*/
 
 func reset(config *Config) {
 	sql := SQL_COMMAND
@@ -148,4 +175,5 @@ func reset(config *Config) {
 		log.Fatal(err)
 	}
 	fmt.Println(copyCount)
+	config.Pool.Do(radix.Cmd(nil, "DEL", "EloRating"))
 }
