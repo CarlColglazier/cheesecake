@@ -18,10 +18,10 @@
 				</v-card-title>
 				<v-card-text>
 					<v-list>
-						<v-list-item v-for="event in events" :key="event.Key">
+						<v-list-item v-for="event in events" :key="event.key">
 							<v-list-item-title>
-								<nuxt-link :to="'/event/' + event.Key">
-									{{ event.ShortName }}
+								<nuxt-link :to="'/event/' + event.key">
+									{{ event.short_name }}
 								</nuxt-link>
 							</v-list-item-title>
 						</v-list-item>

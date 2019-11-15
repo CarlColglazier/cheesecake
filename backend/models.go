@@ -1,45 +1,82 @@
 package main
 
 import (
+	"fmt"
+	"github.com/jackc/pgx"
 	"github.com/pkg/errors"
+	"os"
 	"sort"
+	"time"
 )
 
+func Connect(applicationName string) (conn *pgx.ConnPool) {
+	var runtimeParams map[string]string
+	runtimeParams = make(map[string]string)
+	runtimeParams["application_name"] = applicationName
+	connConfig := pgx.ConnConfig{
+		User:              "postgres",
+		Password:          "postgres",
+		Host:              "db",
+		Port:              5432,
+		Database:          "postgres",
+		TLSConfig:         nil,
+		UseFallbackTLS:    false,
+		FallbackTLSConfig: nil,
+		RuntimeParams:     runtimeParams,
+	}
+	connPoolConfig := pgx.ConnPoolConfig{ConnConfig: connConfig, MaxConnections: 8}
+	errors := 0
+	for errors < 10 {
+		conn, err := pgx.NewConnPool(connPoolConfig)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
+			time.Sleep(2000 * time.Millisecond)
+			errors += 1
+		} else {
+			return conn
+		}
+
+	}
+	os.Exit(1)
+	return nil
+}
+
 type Match struct {
-	Key             string                 `db:"key"`
-	CompLevel       string                 `db:"comp_level"`
-	SetNumber       int                    `db:"set_number"`
-	MatchNumber     int                    `db:"match_number"`
-	WinningAlliance string                 `db:"winning_alliance"`
-	EventKey        string                 `db:"event_key"`
-	Time            int                    `db:"time"`
-	ActualTime      int                    `db:"actual_time"`
-	PredictedTime   int                    `db:"predicted_time"`
-	PostResultTime  int                    `db:"post_result_time"`
-	ScoreBreakdown  map[string]interface{} `db:"score_breakdown"`
+	Key             string                 `db:"key" json:"key"`
+	CompLevel       string                 `db:"comp_level" json:"comp_level"`
+	SetNumber       int                    `db:"set_number" json:"set_number"`
+	MatchNumber     int                    `db:"match_number" json:"match_number"`
+	WinningAlliance string                 `db:"winning_alliance" json:"winning_alliance"`
+	EventKey        string                 `db:"event_key" json:"event_key"`
+	Time            int                    `db:"time" json:"time"`
+	ActualTime      int                    `db:"actual_time" json:"actual_time"`
+	PredictedTime   int                    `db:"predicted_time" json:"predicted_time"`
+	PostResultTime  int                    `db:"post_result_time" json:"post_result_time"`
+	ScoreBreakdown  map[string]interface{} `db:"score_breakdown" json:"score_breakdown"`
 }
 
 type Alliance struct {
-	Key      string `db:"key"`
-	Score    int    `db:"score"`
-	Color    string `db:"color"`
-	MatchKey string `db:"match_key"`
+	Key      string `db:"key" json:"key"`
+	Score    int    `db:"score" json:"score"`
+	Color    string `db:"color" json:"color"`
+	MatchKey string `db:"match_key" json:"match_key"`
 }
 
 type AllianceTeam struct {
-	Position   int    `db:"position"`
-	AllianceId string `db:"alliance_id"`
-	TeamKey    string `db:"team_key"`
+	Position   int    `db:"position" json:"position"`
+	AllianceId string `db:"alliance_id" json:"alliance_id"`
+	TeamKey    string `db:"team_key" json:"team_key"`
 }
 
 type AllianceEntry struct {
-	Alliance Alliance
-	Teams    []string
+	Alliance Alliance `json:"alliance"`
+	Teams    []string `json:"teams"`
 }
 
 type MatchEntry struct {
-	Match     Match
-	Alliances map[string]*AllianceEntry
+	Match       *Match                    `json:"match"`
+	Alliances   map[string]*AllianceEntry `json:"alliances"`
+	Predictions map[string]float64        `json:"predictions"`
 }
 
 type PredictionHistory struct {
@@ -50,8 +87,8 @@ type PredictionHistory struct {
 }
 
 type Event struct {
-	ShortName *string
-	Key       string
+	ShortName *string `json:"short_name"`
+	Key       string  `json:"key"`
 }
 
 func (me *MatchEntry) Diff() (int, error) {
@@ -65,10 +102,16 @@ func (me *MatchEntry) Diff() (int, error) {
 }
 
 func (config *Config) getEventMatches(event string) ([]MatchEntry, error) {
-	rows, err := config.Conn.Query(`SELECT * FROM match
+	rows, err := config.Conn.Query( //`SELECT * FROM match
+		//JOIN alliance on (match.key = alliance.match_key)
+		//JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+		//where match.event_key = '` + event + `'`)
+		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'EloScore'
 where match.event_key = '` + event + `'`)
+
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +121,7 @@ where match.event_key = '` + event + `'`)
 		var match Match
 		var alliance Alliance
 		var aTeam AllianceTeam
+		eloScorePrediction := 0.0
 		rows.Scan(
 			&match.Key,
 			&match.CompLevel,
@@ -97,12 +141,14 @@ where match.event_key = '` + event + `'`)
 			&aTeam.Position,
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
+			&eloScorePrediction,
 		)
 		// temp: This takes up too much memory.
 		//match.ScoreBreakdown = nil
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
-			matches[match.Key] = MatchEntry{match, dict}
+			preds := make(map[string]float64)
+			matches[match.Key] = MatchEntry{&match, dict, preds}
 		}
 		key := match.Key
 		if _, ok := matches[key].Alliances[alliance.Color]; !ok {
@@ -113,6 +159,7 @@ where match.event_key = '` + event + `'`)
 			matches[key].Alliances[alliance.Color].Teams,
 			aTeam.TeamKey,
 		)
+		matches[key].Predictions["EloScore"] = eloScorePrediction
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
@@ -165,7 +212,8 @@ where match.event_key like '2019%'`)
 		match.ScoreBreakdown = nil
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
-			matches[match.Key] = MatchEntry{match, dict}
+			preds := make(map[string]float64)
+			matches[match.Key] = MatchEntry{&match, dict, preds}
 		}
 		key := match.Key
 		if _, ok := matches[key].Alliances[alliance.Color]; !ok {
@@ -200,7 +248,6 @@ where event.key like '2019%'`)
 	var events []Event
 	for rows.Next() {
 		var event Event
-		//shortName := ""
 		rows.Scan(
 			&event.Key,
 			&event.ShortName,
