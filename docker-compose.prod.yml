@@ -1,5 +1,6 @@
 version: '3'
 services:
   frontend:
+    command: yarn start
     environment:
       ENVIRONMENT: production
