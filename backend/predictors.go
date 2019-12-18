@@ -6,7 +6,6 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 	"io/ioutil"
 	"log"
-	"math"
 )
 
 func ReadEloRecords() (map[string]float64, error) {
@@ -62,7 +61,7 @@ func (pred *EloPredictor) Predict(me MatchEntry) float64 {
 	}
 	red := elos["red"]
 	blue := elos["blue"]
-	return 1.0 / (1 + math.Pow(10, blue-red/400))
+	return EloPredict(red, blue)
 }
 
 func (pred *EloPredictor) AddResult(me MatchEntry) {
@@ -125,9 +124,7 @@ func (pred *EloScorePredictor) Predict(me MatchEntry) float64 {
 		}
 		elos[key] /= float64(len(val.Teams))
 	}
-	red := elos["red"]
-	blue := elos["blue"]
-	return 1.0 / (1 + math.Pow(10, (blue-red)/400))
+	return EloPredict(elos["red"], elos["blue"])
 }
 
 func (pred *EloScorePredictor) AddResult(me MatchEntry) {

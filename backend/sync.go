@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
-	"github.com/mediocregopher/radix/v3"
 	"log"
 	"sync"
 )
@@ -58,43 +57,32 @@ func (config *Config) syncEvents() {
 }
 
 func calculateElo(config *Config) ([]byte, error) {
-	var s []byte
-	err := config.Pool.Do(radix.Cmd(&s, "GET", "EloRating"))
-	if err != nil || len(s) == 0 {
-		log.Println("Could not fetch scores from cache. Calculating...")
-		matches, err := config.getMatches()
-		if err != nil {
-			return nil, err
-		}
-		log.Println(len(matches))
-		pred := NewEloScorePredictor()
-		pred.Dampen()
-		var predictions [][]interface{}
-		for _, match := range matches {
-			p := pred.Predict(match)
-			predictions = append(predictions, []interface{}{match.Match.Key, p, "elo_score"})
-			pred.AddResult(match)
-		}
-		config.Conn.CopyFrom(
-			pgx.Identifier{"prediction_history"},
-			[]string{"match", "prediction", "model"},
-			pgx.CopyFromRows(predictions),
-		)
-		//json.NewEncoder(w).Encode(pred.CurrentValues())
-		j, _ := json.Marshal(pred.CurrentValues())
-		config.Pool.Do(radix.Cmd(nil, "SET", "EloRating", fmt.Sprintf("%s", j)))
-		return j, nil
+	log.Println("Could not fetch scores from cache. Calculating...")
+	// TODO: Check the cache here. This runs multiple times otherwise.
+	matches, err := config.getMatches()
+	if err != nil {
+		return nil, err
 	}
-	return s, nil
+	log.Println(len(matches))
+	pred := NewEloScorePredictor()
+	pred.Dampen()
+	var predictions [][]interface{}
+	for _, match := range matches {
+		p := pred.Predict(match)
+		predictions = append(predictions, []interface{}{match.Match.Key, p, "elo_score"})
+		pred.AddResult(match)
+	}
+	config.Conn.CopyFrom(
+		pgx.Identifier{"prediction_history"},
+		[]string{"match", "prediction", "model"},
+		pgx.CopyFromRows(predictions),
+	)
+	j, err := json.Marshal(pred.CurrentValues())
+	return j, err
 }
 
 func reset(config *Config) {
-	sql := SQL_COMMAND
-	_, err := config.Conn.Exec(sql)
-	if err != nil {
-		// handle error.
-		log.Fatal(err)
-	}
+	config.Migrate()
 	teamList, err := config.Tba.GetAllTeams()
 	if err != nil {
 		log.Fatal(err)
@@ -175,5 +163,4 @@ func reset(config *Config) {
 		log.Fatal(err)
 	}
 	fmt.Println(copyCount)
-	config.Pool.Do(radix.Cmd(nil, "DEL", "EloRating"))
 }

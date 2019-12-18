@@ -3,8 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
+	//"github.com/rs/cors"
 	"log"
 	"net/http"
 )
@@ -17,8 +18,8 @@ func runServer(config Config) {
 	router.HandleFunc("/reset", config.ResetReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
-	handler := cors.Default().Handler(router)
-	//log.Fatal(http.ListenAndServe(":8080", router), c.Handler(router))
+	corsObj := handlers.AllowedOrigins([]string{"*"})
+	handler := handlers.CORS(corsObj)(router)
 	http.ListenAndServe(":8080", handler)
 }
 

@@ -19,7 +19,7 @@ func Connect(applicationName string) (conn *pgx.ConnPool) {
 		Password:          "postgres",
 		Host:              "db",
 		Port:              5432,
-		Database:          "postgres",
+		Database:          "cheesecake",
 		TLSConfig:         nil,
 		UseFallbackTLS:    false,
 		FallbackTLSConfig: nil,

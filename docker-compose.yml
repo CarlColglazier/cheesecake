@@ -26,7 +26,7 @@ services:
       - pg_data:/var/lib/postgresql/data/pg_data:z
     environment:
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: cheesecake
       POSTGRES_USER: postgres
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
