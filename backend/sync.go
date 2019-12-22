@@ -85,7 +85,8 @@ func reset(config *Config) {
 	config.Migrate("db", "cheesecake")
 	teamList, err := config.Tba.GetAllTeams()
 	if err != nil {
-		log.Fatal(err)
+		log.println(err)
+		return
 	}
 	config.insertTeams(teamList)
 	config.syncEvents()
@@ -160,7 +161,7 @@ func reset(config *Config) {
 		pgx.CopyFromRows(aTeams),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	fmt.Println(copyCount)
 }
