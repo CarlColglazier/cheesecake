@@ -18,15 +18,12 @@ func (config *Config) Migrate(db, database string) {
 		log.Println("Could not connect for migration.")
 		log.Println(err)
 	}
-	// TODO: This should be dependent on the current migration status.
-	/*
-		if err := m.Down(); err != nil {
-			log.Println("Could not set down.")
+	version, _, err := m.Version()
+	log.Println("Database on version %d", version)
+	if err != nil {
+		if err := m.Up(); err != nil {
+			log.Println("Could not set migration up.")
 			log.Println(err)
 		}
-	*/
-	if err := m.Up(); err != nil {
-		log.Println("Could not set migration up.")
-		log.Println(err)
 	}
 }

@@ -20,7 +20,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - pg_data:/var/lib/postgresql/data/pg_data:z
+      - ./pg_data:/var/lib/postgresql/data/pg_data:z
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: cheesecake
@@ -28,5 +28,3 @@ services:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       PGDATA: /var/lib/postgresql/data/pg_data
-volumes:
-  pg_data:
