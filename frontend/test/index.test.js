@@ -21,7 +21,7 @@ test('Route / exists and render HTML', async (t) => {
   const { nuxt } = t.context
   const context = {}
   const { html } = await nuxt.renderRoute('/', context)
-  t.true(html.includes('<h1 class="red">Hello world!</h1>'))
+  t.true(html.includes('<h1>Homepage</h1>'))
 })
 
 // Close the Nuxt server
