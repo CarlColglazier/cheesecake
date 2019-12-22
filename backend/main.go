@@ -35,10 +35,12 @@ func main() {
 			time.Sleep(1000 * time.Millisecond)
 		}
 	}
+	log.Println("Connected to the database.")
 	tbakey := os.Getenv("TBA_KEY")
 	tbaInst := tba.NewTba(tbakey)
 	defer tbaInst.Close()
 	config := Config{Conn: conn, Tba: tbaInst}
+	log.Println("Config created")
 	args := os.Args[1:]
 	if len(args) == 1 {
 		if args[0] == "server" {
