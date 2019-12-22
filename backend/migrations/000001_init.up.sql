@@ -87,3 +87,8 @@ CREATE TABLE alliance_teams (
 	CONSTRAINT alliance_teams_alliance_id_fkey FOREIGN KEY (alliance_id) REFERENCES alliance(key),
 	CONSTRAINT alliance_teams_team_key_fkey FOREIGN KEY (team_key) REFERENCES team(key)
 );
+
+CREATE TABLE json_cache (
+       "key" varchar(100) PRIMARY KEY,
+       value json NULL
+);

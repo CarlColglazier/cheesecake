@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	//"github.com/rs/cors"
 	"log"
 	"net/http"
 )

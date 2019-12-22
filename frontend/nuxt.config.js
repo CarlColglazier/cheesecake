@@ -49,7 +49,7 @@ export default {
   /*
    ** Build configuration
    */
-  build: {
+    build: {
     /*
      ** You can extend webpack config here
      */

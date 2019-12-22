@@ -20,3 +20,14 @@ prod:
 			-f docker-compose.yml \
 			-f docker-compose.prod.yml \
 		up -d --build
+
+test:
+	docker-compose build && \
+	docker-compose up -d db && \
+	docker-compose \
+		-f docker-compose.test.yml \
+		up backend && \
+	docker-compose \
+		-f docker-compose.test.yml \
+		up frontend && \
+	docker-compose down

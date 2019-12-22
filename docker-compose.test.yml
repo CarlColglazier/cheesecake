@@ -1,20 +1,17 @@
 version: '3'
 services:
   backend:
-    build:
+    command: "go test -v -cover"
+    build: 
       context: "./backend/"
+      dockerfile: Dockerfile
     ports:
       - 8080:8080
-    depends_on:
-      - "db"
-    volumes:
-      - ./backend:/cheesecake
   frontend:
+    command: yarn test
     build: "./frontend/"
-    ports:
-      - "5000:5000"
-    depends_on:
-      - "backend"
+    environment:
+      ENVIRONMENT: test
   db:
     image: postgres:11.0-alpine
     ports:
@@ -23,7 +20,7 @@ services:
       - pg_data:/var/lib/postgresql/data/pg_data:z
     environment:
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: cheesecake
+      POSTGRES_DB: cheesecake_test
       POSTGRES_USER: postgres
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432

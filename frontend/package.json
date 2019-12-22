@@ -5,16 +5,21 @@
   "author": "Carl Colglazier",
   "private": true,
   "scripts": {
-    "lint": "eslint --ext .js,.vue --ignore-path .gitignore .",
-    "precommit": "yarn lint",
-    "test": "jest",
+    "test": "ava",
     "dev": "nuxt",
     "build": "nuxt build",
-    "start": "nuxt start",
-    "generate": "nuxt generate"
+    "start": "nuxt start"
   },
   "dependencies": {
     "nuxt": "^2.11.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "ava": "^2.4.0",
+    "jsdom": "^15.2.1"
+  },
+  "ava": {
+    "files": [
+      "test/**/*"
+    ]
+  }
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 )
 
+/// Read the score cache from a file.
 func ReadEloRecords() (map[string]float64, error) {
 	file, err := ioutil.ReadFile("elo2018.json")
 	if err != nil {
@@ -21,6 +22,8 @@ func ReadEloRecords() (map[string]float64, error) {
 	return records, nil
 }
 
+/// Predictor provides functions for updating results and
+/// returning match predictions.
 type Predictor interface {
 	Predict(MatchEntry) float64
 	AddResult(MatchEntry)
@@ -80,7 +83,7 @@ func (pred *EloPredictor) AddResult(me MatchEntry) {
 			}
 			if key == "red" {
 				pred.current[teamKey] += k * diff
-			} else { //if key == "blue" {
+			} else {
 				pred.current[teamKey] -= k * diff
 			}
 		}
