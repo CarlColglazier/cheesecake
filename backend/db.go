@@ -1,10 +1,7 @@
 package main
 
 import (
-	//"fmt"
 	"github.com/jackc/pgx"
-	//"os"
-	//"time"
 )
 
 func Connect(host, applicationName string) (*pgx.ConnPool, error) {
