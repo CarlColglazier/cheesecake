@@ -1,8 +1,12 @@
 import Vue from 'vue'
 
-let url = (process.server) ? 'http://backend:8080' : 'http://localhost:8080';
-if (process.env.ENVIRONMENT === 'production') {
+let url;
+if (process.server) {
+    url = 'http://backend:8080'
+} else if (process.env.ENVIRONMENT === 'production') {
     url = 'https://cheesecake.live/api/';
+} else {
+    url = 'http://localhost:8080';
 }
 
 export default ({ app }, inject) => {
