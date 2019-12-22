@@ -1,30 +1,30 @@
 <template>
 	<content>
-		<table>
-			<thead>
-				<tr>
-					<th>Key</th>
-					<th colspan="1">
+		<b-table-simple>
+			<b-thead>
+				<b-tr>
+					<b-th>Key</b-th>
+					<b-th colspan="1">
 						Red
-					</th>
-					<th colspan="1">
+					</b-th>
+					<b-th colspan="1">
 						Blue
-					</th>
-					<th colspan="2">
+					</b-th>
+					<b-th colspan="2">
 						Score
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="d in matches" :key="d.match.key">
-					<td>
+					</b-th>
+				</b-tr>
+			</b-thead>
+			<b-tbody>
+				<b-tr v-for="d in matches" :key="d.match.key">
+					<b-td>
 						{{
 							d.match.comp_level +
 								(d.match.comp_level != 'qm' ? d.match.set_number : '') +
 								d.match.match_number
 						}}
-					</td>
-					<td>
+					</b-td>
+					<b-td>
 						<span
 							v-for="team in d.alliances.red.teams"
 							:key="team"
@@ -32,8 +32,8 @@
 						>
 							{{ team.substring(3) }}
 						</span>
-					</td>
-					<td>
+					</b-td>
+					<b-td>
 						<span
 							v-for="team in d.alliances.blue.teams"
 							:key="team"
@@ -41,16 +41,16 @@
 						>
 							{{ team.substring(3) }}
 						</span>
-					</td>
-					<td>
+					</b-td>
+					<b-td>
 						<span class="break">
 							{{ d.alliances.red.alliance.score }}
 						</span>
 						<span class="break">
 							{{ displayPrediction(d.predictions.elo_score.prediction, 'red') }}
 						</span>
-					</td>
-					<td>
+					</b-td>
+					<b-td>
 						<span class="break">
 							{{ d.alliances.blue.alliance.score }}
 						</span>
@@ -59,21 +59,16 @@
 								displayPrediction(d.predictions.elo_score.prediction, 'blue')
 							}}
 						</span>
-					</td>
-				</tr>
-			</tbody>
-		</table>
+					</b-td>
+				</b-tr>
+			</b-tbody>
+		</b-table-simple>
 	</content>
 </template>
 
 <style>
 span.break {
 	display: block;
-}
-
-td, th {
-    text-align: center;
-    padding: 1em;
 }
 </style>
 
