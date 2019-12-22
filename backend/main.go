@@ -20,13 +20,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	conn := Connect("cheesecake")
+	conn, err := Connect("db", "cheesecake")
+	if err != nil {
+		log.Println("Could not load database")
+	}
 	tbakey := os.Getenv("TBA_KEY")
 	tbaInst := tba.NewTba(tbakey)
 	defer tbaInst.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
 	config := Config{Conn: conn, Tba: tbaInst}
 	args := os.Args[1:]
 	if len(args) == 1 {

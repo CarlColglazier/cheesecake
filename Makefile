@@ -23,11 +23,11 @@ prod:
 
 test:
 	docker-compose build && \
-	docker-compose up -d db && \
+	docker-compose -f docker-compose.test.yml up -d testdb && \
 	docker-compose \
 		-f docker-compose.test.yml \
 		up backend && \
 	docker-compose \
 		-f docker-compose.test.yml \
 		up frontend && \
-	docker-compose down
+	docker-compose -f docker-compose.test.yml down
