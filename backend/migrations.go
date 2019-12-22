@@ -19,7 +19,7 @@ func (config *Config) Migrate(db, database string) {
 		log.Println(err)
 	}
 	version, _, err := m.Version()
-	log.Println("Database on version %d", version)
+	log.Printf("Database on version %d", version)
 	if err != nil {
 		if err := m.Up(); err != nil {
 			log.Println("Could not set migration up.")

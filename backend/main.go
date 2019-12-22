@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"time"
 )
 
 const POOLS = 2
@@ -22,8 +23,12 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	conn, err := Connect("db", "cheesecake")
-	if err != nil {
-		log.Println("Could not load database")
+	errors := 0
+	for errors < 5 {
+		if err != nil {
+			log.Println("Could not load database")
+			time.Sleep(1000 * time.Millisecond)
+		}
 	}
 	tbakey := os.Getenv("TBA_KEY")
 	tbaInst := tba.NewTba(tbakey)
