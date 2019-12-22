@@ -17,8 +17,7 @@ type Config struct {
 }
 
 func init() {
-	//log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.SetPrefix("TRACE: ")
+	log.SetFlags(0)
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Llongfile)
 	log.Println("init started")
 }
