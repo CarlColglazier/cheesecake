@@ -28,7 +28,13 @@ func main() {
 		if err != nil {
 			log.Println("Could not load database")
 			time.Sleep(1000 * time.Millisecond)
+			errors += 1
+		} else {
+			break
 		}
+	}
+	if errors == 5 {
+		log.Fatal("Could not connect to database. Exiting.")
 	}
 	log.Println("Connected to the database.")
 	tbakey := os.Getenv("TBA_KEY")
