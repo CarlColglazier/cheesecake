@@ -18,6 +18,7 @@ func (config *Config) Migrate() {
 		log.Println("Could not connect for migration.")
 		log.Println(err)
 	}
+	// TODO: This should be dependent on the current migration status.
 	if err := m.Down(); err != nil {
 		log.Println("Could not set down.")
 		log.Println(err)
