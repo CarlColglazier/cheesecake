@@ -85,7 +85,7 @@ func reset(config *Config) {
 	config.Migrate("db", "cheesecake")
 	teamList, err := config.Tba.GetAllTeams()
 	if err != nil {
-		log.println(err)
+		log.Println(err)
 		return
 	}
 	config.insertTeams(teamList)
