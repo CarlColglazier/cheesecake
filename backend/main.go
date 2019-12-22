@@ -16,8 +16,11 @@ type Config struct {
 	Tba  *tba.TheBlueAlliance
 }
 
-func main() {
+func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
+func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
