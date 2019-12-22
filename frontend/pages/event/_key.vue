@@ -73,8 +73,6 @@ span.break {
 </style>
 
 <script>
-let url = (process.server) ? 'http://backend:8080' : 'http://localhost:8080';
-
 function rankPoints(input) {
 	if (input) {
 		return '\u2713'
