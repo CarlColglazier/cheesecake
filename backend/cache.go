@@ -1,9 +1,5 @@
 package main
 
-import (
-	"github.com/jackc/pgx"
-)
-
 func (config *Config) CacheGet(key string) (string, error) {
 	rows, err := config.Conn.Query(`SELECT value from json_cache where json_cache.key = ` + key)
 	defer rows.Close()
@@ -24,12 +20,8 @@ func (config *Config) CacheSet(key, value string) error {
 		key,
 		value,
 	})
-	_, err := config.Conn.CopyFrom(
-		pgx.Identifier{"json_cache"},
-		[]string{
-			"key", "value",
-		},
-		pgx.CopyFromRows(a),
+	_, err := config.Conn.Exec(
+		"INSERT INTO json_cache (key, value) VALUES ($1, $2)", key, value,
 	)
 	if err != nil {
 		return err

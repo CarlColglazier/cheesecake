@@ -82,7 +82,7 @@ func calculateElo(config *Config) ([]byte, error) {
 }
 
 func reset(config *Config) {
-	config.Migrate()
+	config.Migrate("db", "cheesecake")
 	teamList, err := config.Tba.GetAllTeams()
 	if err != nil {
 		log.Fatal(err)
