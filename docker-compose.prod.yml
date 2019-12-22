@@ -1,7 +1,7 @@
 version: '3'
 services:
   backend:
-    command: "backend server"
+    command: backend server
   frontend:
     command: yarn start
     environment:
