@@ -17,26 +17,28 @@ type Config struct {
 }
 
 func main() {
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Llongfile)
+	//log.SetFlags(log.Ldate | log.Lmicroseconds | log.Llongfile)
+	log.Println("Starting...")
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 	conn, err := Connect("db", "cheesecake")
-	errors := 0
-	for errors < 5 {
+	error_count := 0
+	for error_count < 5 {
 		if err != nil {
 			log.Println("Could not load database")
 			time.Sleep(1000 * time.Millisecond)
-			errors += 1
+			conn, err = Connect("db", "cheesecake")
+			error_count += 1
 		} else {
+			log.Println("Connected to the database.")
 			break
 		}
 	}
-	if errors == 5 {
+	if error_count == 5 {
 		log.Fatal("Could not connect to database. Exiting.")
 	}
-	log.Println("Connected to the database.")
 	tbakey := os.Getenv("TBA_KEY")
 	tbaInst := tba.NewTba(tbakey)
 	defer tbaInst.Close()

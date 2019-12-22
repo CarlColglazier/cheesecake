@@ -134,10 +134,10 @@ func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
 		log.Println(err)
 		return nil, err
 	}
-	fmt.Println("len events ", len(events))
+	//fmt.Println("len events ", len(events))
 	channel := make(chan []Match)
 	for _, event := range events {
-		fmt.Println(event.Key)
+		//fmt.Println(event.Key)
 		url := fmt.Sprintf("event/%s/matches", event.Key)
 		go func(url string) {
 			matchesString, _ := tba.tbaRequest(url)
