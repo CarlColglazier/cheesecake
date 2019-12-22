@@ -15,12 +15,15 @@ func (config *Config) Migrate() {
 		"file://migrations",
 		"postgres://postgres:postgres@db:5432/cheesecake?sslmode=disable")
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Could not connect for migration.")
+		log.Println(err)
 	}
 	if err := m.Down(); err != nil {
-		log.Fatal(err)
+		log.Println("Could not set down.")
+		log.Println(err)
 	}
 	if err := m.Up(); err != nil {
-		log.Fatal(err)
+		log.Println("Could not set migration up.")
+		log.Println(err)
 	}
 }
