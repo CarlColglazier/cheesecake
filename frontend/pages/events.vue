@@ -8,11 +8,10 @@
 </template>
 
 <script>
- let url = (process.server) ? 'http://backend:8080' : 'http://localhost:8080';
  export default {
      layout: 'default',
-     async asyncData() {
-         const resp = await fetch(`${url}/events`);
+     async asyncData(context) {
+         const resp = await context.app.fetch('/events');
          const js = await resp.json();
          return { events: js };
      }

@@ -97,8 +97,8 @@ function prediction(num, color) {
 }
 
 export default {
-	async asyncData({ params }) {
-		const dataf = await fetch(url + '/matches/' + params.key)
+	async asyncData(context) {
+		const dataf = await context.app.fetch('/matches/' + context.params.key)
 		const data = await dataf.json()
 		return { matches: data }
 	},

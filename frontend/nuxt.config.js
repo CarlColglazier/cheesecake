@@ -30,12 +30,14 @@ export default {
   /*
    ** Plugins to load before mounting the App
    */
-  plugins: [],
+  plugins: [
+    '~/plugins/api'
+  ],
   /*
    ** Nuxt.js modules
    */
   modules: [
-    'bootstrap-vue/nuxt'
+    'bootstrap-vue/nuxt',
   ],
   /*
    ** Axios module configuration
