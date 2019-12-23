@@ -71,11 +71,10 @@ CREATE TABLE alliance (
 
 
 CREATE TABLE prediction_history (
-	"key" serial NOT NULL,
  	"match" varchar(25) NULL,
+	model varchar(100) NULL,
  	prediction float8 NULL,
- 	model varchar(100) NULL,
- 	CONSTRAINT prediction_history_pkey PRIMARY KEY (key),
+	CONSTRAINT prediction_history_pkey PRIMARY KEY("match", model),
  	CONSTRAINT prediction_history_match_fkey FOREIGN KEY (match) REFERENCES match(key)
 );
 

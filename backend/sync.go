@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/pgtype"
 	"log"
 	"sync"
 )
@@ -76,17 +78,26 @@ func calculateElo(config *Config) ([]byte, error) {
 	log.Println(len(matches))
 	pred := NewEloScorePredictor()
 	pred.Dampen()
-	var predictions [][]interface{}
+	batch := config.Conn.BeginBatch()
 	for _, match := range matches {
 		p := pred.Predict(match)
-		predictions = append(predictions, []interface{}{match.Match.Key, p, "elo_score"})
+		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
+			[]interface{}{match.Match.Key, "eloscores", p},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.Float8OID},
+			nil,
+		)
 		pred.AddResult(match)
 	}
-	config.Conn.CopyFrom(
-		pgx.Identifier{"prediction_history"},
-		[]string{"match", "prediction", "model"},
-		pgx.CopyFromRows(predictions),
-	)
+	err = batch.Send(context.Background(), nil)
+	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(matches); i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting eloscore: %s", err)
+		}
+	}
 	values := pred.CurrentValues()
 	j, err := json.Marshal(values)
 	if err != nil {
