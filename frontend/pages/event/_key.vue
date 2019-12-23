@@ -103,7 +103,6 @@ export default {
 			return { matches: data }
 		} catch (e) {
 			console.error(e)
-		} finally {
 			return { matches: [] }
 		}
 	},
