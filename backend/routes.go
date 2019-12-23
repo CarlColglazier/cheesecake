@@ -14,7 +14,6 @@ func runServer(config Config) {
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/matches", config.MatchReq)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
-	router.HandleFunc("/reset", config.ResetReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
@@ -25,12 +24,6 @@ func runServer(config Config) {
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, `{status: "good 1"}`)
-}
-
-func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
-	reset(config)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Done")
 }
 
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {

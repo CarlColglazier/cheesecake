@@ -70,12 +70,13 @@ func calculateElo(config *Config) ([]byte, error) {
 		} else {
 			return b, nil
 		}
+	} else {
+		log.Println("Empty response. Calculating...")
 	}
 	matches, err := config.getMatches()
 	if err != nil {
 		return nil, err
 	}
-	log.Println(len(matches))
 	pred := NewEloScorePredictor()
 	pred.Dampen()
 	batch := config.Conn.BeginBatch()
@@ -97,6 +98,10 @@ func calculateElo(config *Config) ([]byte, error) {
 		if err != nil {
 			log.Printf("Error upserting eloscore: %s", err)
 		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
 	}
 	values := pred.CurrentValues()
 	j, err := json.Marshal(values)
@@ -193,4 +198,9 @@ func reset(config *Config) {
 		log.Println(err)
 	}
 	fmt.Println(copyCount)
+	fmt.Println("Calculating elo scores...")
+	_, err = calculateElo(config)
+	if err != nil {
+		log.Println(err)
+	}
 }

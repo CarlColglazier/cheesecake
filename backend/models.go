@@ -71,7 +71,7 @@ func (config *Config) getEventMatches(event string) ([]MatchEntry, error) {
 		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'elo_score'
+LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'eloscores'
 where match.event_key = '` + event + `'`)
 
 	if err != nil {
