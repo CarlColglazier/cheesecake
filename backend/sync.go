@@ -57,8 +57,18 @@ func (config *Config) syncEvents() {
 }
 
 func calculateElo(config *Config) ([]byte, error) {
-	log.Println("Could not fetch scores from cache. Calculating...")
-	// TODO: Check the cache here. This runs multiple times otherwise.
+	vals, err := config.CacheGet("eloscores")
+	if err != nil {
+		log.Println(err)
+		log.Println("Could not fetch scores from cache. Calculating...")
+	} else if len(vals) > 2 {
+		b, err := json.Marshal(vals)
+		if err != nil {
+			log.Println("Could not marshal Elo ratings")
+		} else {
+			return b, nil
+		}
+	}
 	matches, err := config.getMatches()
 	if err != nil {
 		return nil, err
@@ -77,8 +87,16 @@ func calculateElo(config *Config) ([]byte, error) {
 		[]string{"match", "prediction", "model"},
 		pgx.CopyFromRows(predictions),
 	)
-	j, err := json.Marshal(pred.CurrentValues())
-	return j, err
+	values := pred.CurrentValues()
+	j, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+	err = config.CacheSetStr("eloscores", string(j))
+	if err != nil {
+		log.Printf("Could not set 'eloscores' in cache: %s", err)
+	}
+	return j, nil
 }
 
 func reset(config *Config) {
