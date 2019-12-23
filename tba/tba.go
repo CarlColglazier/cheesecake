@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"github.com/mediocregopher/radix/v3"
 	"io/ioutil"
 	"log"
 	"net/http"
-	//"sync"
 )
 
 // BASE URL for The Blue Alliance API. We are on v3 at the moment.
@@ -24,7 +22,6 @@ type TBACall struct {
 type TheBlueAlliance struct {
 	Key   string
 	cache map[string]TBACall
-	//pool  *radix.Pool
 }
 
 // NewTba creates a new TheBlueAlliance object and initialize the
@@ -46,20 +43,6 @@ func (tba *TheBlueAlliance) tbaRequest(url string) (string, error) {
 	fmt.Println(url)
 	lastTime := "Sun, 30 Jun 2000 09:07:40 GMT"
 	val := TBACall{Modified: "", Body: ""}
-	/*
-		var s []byte
-
-		//err := tba.pool.Do(radix.Cmd(&s, "GET", url))
-		//if err != nil {
-		//log.Println(":( ", err)
-		//}
-		err = json.Unmarshal(s, &val)
-		if err != nil {
-			log.Println("Unmarshal ", err)
-		} else if len(val.Modified) > 0 {
-			lastTime = val.Modified
-		}
-	*/
 	tbaurl := fmt.Sprintf("%s%s", BASE, url)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", tbaurl, nil)

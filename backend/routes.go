@@ -12,7 +12,6 @@ import (
 func runServer(config Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
-	router.HandleFunc("/matches", config.MatchReq)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
@@ -23,22 +22,13 @@ func runServer(config Config) {
 
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, `{}`)
+	fmt.Fprint(w, `{}`)
 }
 
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	matches, err := config.getEventMatches(vars["event"])
-	if err != nil {
-		log.Println(err)
-	}
-	json.NewEncoder(w).Encode(matches)
-}
-
-func (config *Config) MatchReq(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	matches, err := config.getMatches()
 	if err != nil {
 		log.Println(err)
 	}
