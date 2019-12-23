@@ -97,7 +97,14 @@ function prediction(num, color) {
 export default {
 	async asyncData(context) {
 		const dataf = await context.app.fetch('/matches/' + context.params.key)
-		const data = await dataf.json()
+		if (!dataf.ok) {
+			console.error("Bad response from API.")
+			return { matches: [] }
+		}
+		const data = await dataf.json().catch((err) => {
+			console.error(err)
+			return { matches: [] }
+		})
 		return { matches: data }
 	},
 	methods: {
