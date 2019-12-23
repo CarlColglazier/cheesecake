@@ -23,6 +23,7 @@ func runServer(config Config) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, `{status: "good 1"}`)
 }
 
@@ -33,6 +34,7 @@ func (config *Config) ResetReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	matches, err := config.getEventMatches(vars["event"])
 	if err != nil {
@@ -42,6 +44,7 @@ func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request)
 }
 
 func (config *Config) MatchReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	matches, err := config.getMatches()
 	if err != nil {
 		log.Println(err)

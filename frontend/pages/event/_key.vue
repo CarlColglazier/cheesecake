@@ -95,17 +95,17 @@ function prediction(num, color) {
 }
 
 export default {
+	layout: 'default',
 	async asyncData(context) {
-		const dataf = await context.app.fetch('/matches/' + context.params.key)
-		if (!dataf.ok) {
-			console.error("Bad response from API.")
+		try {
+			const dataf = await context.app.fetch(`/matches/${context.params.key}`)
+			const data = await dataf.json()
+			return { matches: data }
+		} catch (e) {
+			console.error(e)
+		} finally {
 			return { matches: [] }
 		}
-		const data = await dataf.json().catch((err) => {
-			console.error(err)
-			return { matches: [] }
-		})
-		return { matches: data }
 	},
 	methods: {
 		rankPoints: rankPoints,

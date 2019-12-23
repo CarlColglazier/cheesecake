@@ -17,7 +17,7 @@ type Config struct {
 }
 
 func main() {
-	//log.SetFlags(log.Ldate | log.Lmicroseconds | log.Llongfile)
+	log.SetFlags(log.Ldate | log.Llongfile)
 	log.Println("Starting...")
 	err := godotenv.Load()
 	if err != nil {
