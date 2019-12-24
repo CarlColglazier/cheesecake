@@ -90,3 +90,4 @@ sw.*
 *.swp
 
 ./pg_data
+.Rproj.user
