@@ -1,0 +1,41 @@
+---
+title: "Tuning variables."
+output: html_notebook
+---
+
+Connect to the Cheesecake database to start pulling data.
+
+```{r}
+library(DBI)
+library(tidyverse)
+
+con <- DBI::dbConnect(odbc::odbc(),
+                      Driver   = "PostgreSQL Unicode",
+                      Server   = "localhost",
+                      Database = "cheesecake",
+                      UID      = "postgres",
+                      PWD      = "postgres",
+                      Port     = 5432)
+```
+
+Get all matches (which are not ties).
+
+```{r}
+results <- dbGetQuery(con, "select
+	(winning_alliance='red')::int as winner,
+	prediction
+from match
+inner join prediction_history on prediction_history.\"match\"=match.\"key\"
+where match.winning_alliance is not null and length(match.winning_alliance) > 0
+and model='eloscores'")
+```
+
+How good is our calibration?
+
+```{r}
+results %>%
+  mutate(correct = abs(winner - prediction) < 0.5) %>%
+  group_by(gr=cut(prediction, breaks= seq(0, 1, by = 0.1)) ) %>%
+  summarise(n= n(), c=mean(correct))
+```
+
