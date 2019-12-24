@@ -30,6 +30,7 @@ type Predictor interface {
 	CurrentValues() map[string]float64
 }
 
+/*
 type EloPredictor struct {
 	current map[string]float64
 }
@@ -89,6 +90,7 @@ func (pred *EloPredictor) AddResult(me MatchEntry) {
 		}
 	}
 }
+*/
 
 type EloScorePredictor struct {
 	current map[string]float64
@@ -124,6 +126,7 @@ func (pred *EloScorePredictor) Predict(me MatchEntry) float64 {
 				pred.current[teamKey] = 0.0
 			}
 			elos[key] += pred.current[teamKey]
+
 		}
 		elos[key] /= float64(len(val.Teams))
 	}
