@@ -28,70 +28,7 @@ type Predictor interface {
 	Predict(MatchEntry) float64
 	AddResult(MatchEntry)
 	CurrentValues() map[string]float64
-}
-
-type EloPredictor struct {
-	current map[string]float64
-}
-
-func NewEloPredictor() *EloPredictor {
-	scores, err := ReadEloRecords()
-	if err != nil {
-		log.Println("Could not read Elo scores")
-		return &EloPredictor{}
-	}
-	return &EloPredictor{scores}
-}
-
-func (pred *EloPredictor) CurrentValues() map[string]float64 {
-	return pred.current
-}
-
-func (pred *EloPredictor) Dampen() {
-	for k, v := range pred.current {
-		pred.current[k] = 0.5*v + 15
-	}
-}
-
-func (pred *EloPredictor) Predict(me MatchEntry) float64 {
-	elos := make(map[string]float64)
-	for key, val := range me.Alliances {
-		for i := range val.Teams {
-			teamKey := val.Teams[i]
-			elos[key] += pred.current[teamKey]
-		}
-		elos[key] /= float64(len(val.Teams))
-	}
-	red := elos["red"]
-	blue := elos["blue"]
-	return EloPredict(red, blue)
-}
-
-func (pred *EloPredictor) AddResult(me MatchEntry) {
-	prediction := pred.Predict(me)
-	var actual float64
-	if me.Match.WinningAlliance == "red" {
-		actual = 1.0
-	} else if me.Match.WinningAlliance == "blue" {
-		actual = 0.0
-	} else {
-		actual = 0.5
-	}
-	diff := actual - prediction
-	k := 12.0
-	for key, val := range me.Alliances {
-		for i := range val.Teams {
-			teamKey := val.Teams[i]
-			if _, ok := pred.current[teamKey]; !ok {
-				pred.current[teamKey] = 0.0
-			}
-			if key == "red" {
-				pred.current[teamKey] += k * diff
-			} else {
-				pred.current[teamKey] -= k * diff
-			}
-		}
-	}
+	Dampen()
 }
 
 type EloScorePredictor struct {
@@ -220,4 +157,8 @@ func (mp *MarblePredictor) AddResult(me MatchEntry) {
 
 func (mp *MarblePredictor) CurrentValues() map[string]float64 {
 	return mp.current
+}
+
+func (mp *MarblePredictor) Dampen() {
+	// Do nothing
 }

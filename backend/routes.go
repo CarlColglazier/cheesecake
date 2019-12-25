@@ -14,8 +14,7 @@ func runServer(config Config) {
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
-	router.HandleFunc("/elo", config.CalcElo)
-	router.HandleFunc("/elowins", config.CalcEloWins)
+	router.HandleFunc("/elo", config.CalcEloScores)
 	router.HandleFunc("/marbles", config.CalcMarbles)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
@@ -46,17 +45,9 @@ func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(events)
 }
 
-func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
-	j, err := calculateElo(config)
-	if err != nil {
-		log.Println(err)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(j)
-}
-
-func (config *Config) CalcEloWins(w http.ResponseWriter, r *http.Request) {
-	j, err := calculateEloWins(config)
+func (config *Config) CalcEloScores(w http.ResponseWriter, r *http.Request) {
+	pred := NewEloScorePredictor()
+	j, err := calculatePredictor(config, pred, "eloscores")
 	if err != nil {
 		log.Println(err)
 	}
@@ -65,7 +56,8 @@ func (config *Config) CalcEloWins(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) CalcMarbles(w http.ResponseWriter, r *http.Request) {
-	j, err := calculateMarbles(config)
+	pred := NewMarblePredictor()
+	j, err := calculatePredictor(config, pred, "marbles")
 	if err != nil {
 		log.Println(err)
 	}
