@@ -13,11 +13,11 @@ func TestEloPredict(t *testing.T) {
 		want float64
 	}{
 		{0, 0, 0.5},
-		{100, 0, 0.640065},
-		{0, 100, 0.359935},
-		{1100, 1000, 0.640065},
-		{1000, 1100, 0.359935},
-		{-100, 0, 0.359935},
+		{25, 0, 0.640065},
+		{0, 25, 0.359935},
+		{1025, 1000, 0.640065},
+		{1000, 1025, 0.359935},
+		{-25, 0, 0.359935},
 	}
 	for _, test := range tests {
 		if got := EloPredict(test.a, test.b); got > test.want+float64Tresh || got < test.want-float64Tresh {

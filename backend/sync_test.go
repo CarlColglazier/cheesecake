@@ -5,11 +5,16 @@ import (
 	"testing"
 )
 
-func TestInsertTeams(t *testing.T) {
+func loadTestDB() Config {
 	conn, _ := Connect("testdb", "cheesecaketest")
 	tbaInst := tba.NewTba("key")
 	defer tbaInst.Close()
 	config := Config{Conn: conn, Tba: tbaInst}
+	return config
+}
+
+func TestInsertTeams(t *testing.T) {
+	config := loadTestDB()
 	//config.Migrate("testdb", "cheesecaketest")
 	teams := []tba.Team{
 		{Key: "frc1", TeamNumber: 1, Name: "One"},
@@ -48,10 +53,7 @@ func TestInsertTeams(t *testing.T) {
 }
 
 func TestInsertEvents(t *testing.T) {
-	conn, _ := Connect("testdb", "cheesecaketest")
-	tbaInst := tba.NewTba("key")
-	defer tbaInst.Close()
-	config := Config{Conn: conn, Tba: tbaInst}
+	config := loadTestDB()
 	events := []tba.Event{
 		{Key: "2019abcd", ShortName: "A Big C Deal", Year: 2019},
 		{Key: "2019ef", ShortName: "Everyman Fortune", Year: 2019},
@@ -79,4 +81,12 @@ func TestInsertEvents(t *testing.T) {
 	if key != "2019ef" {
 		t.Errorf("Expected %v got %v", "2019ef", key)
 	}
+	confevents, err := config.getEvents()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(confevents) != 2 {
+		t.Errorf("Expected %v got %v", 2, len(confevents))
+	}
+	// TODO: Check for equality.
 }
