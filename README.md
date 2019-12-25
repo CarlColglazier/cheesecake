@@ -2,21 +2,21 @@
 
 > Forecasting for FIRST.
 
-## Build Setup
+## Installing
 
-``` bash
-# install dependencies
-$ yarn install
+Clone the git repo and enter the directory.
 
-# serve with hot reload at localhost:3000
-$ yarn dev
-
-# build for production and launch server
-$ yarn build
-$ yarn start
-
-# generate static project
-$ yarn generate
+```sh
+git clone git@github.com:CarlColglazier/cheesecake.git
+cd cheesecake
 ```
 
-For detailed explanation on how things work, check out [Nuxt.js docs](https://nuxtjs.org).
+Using Docker and docker-compose:
+
+```sh
+make dev
+```
+
+That's it! :)
+
+If you have any issues, please [file an issue](https://github.com/CarlColglazier/cheesecake/issues).
