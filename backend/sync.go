@@ -58,6 +58,123 @@ func (config *Config) syncEvents() {
 	wg.Wait()
 }
 
+func calculateEloWins(config *Config) ([]byte, error) {
+	modelkey := "elowins"
+	vals, err := config.CacheGet(modelkey)
+	if err != nil {
+		log.Println(err)
+		log.Println("Could not fetch scores from cache. Calculating...")
+	} else if len(vals) > 2 {
+		b, err := json.Marshal(vals)
+		if err != nil {
+			log.Println("Could not marshal Elo win ratings")
+		} else {
+			return b, nil
+		}
+	} else {
+		log.Println("Empty response. Calculating...")
+	}
+	matches, err := config.getMatches()
+	if err != nil {
+		return nil, err
+	}
+	pred := NewEloPredictor()
+	pred.Dampen()
+	batch := config.Conn.BeginBatch()
+	for _, match := range matches {
+		p := pred.Predict(match)
+		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
+			[]interface{}{match.Match.Key, modelkey, p},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.Float8OID},
+			nil,
+		)
+		pred.AddResult(match)
+	}
+	err = batch.Send(context.Background(), nil)
+	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(matches); i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting %s: %s", modelkey, err)
+		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
+	values := pred.CurrentValues()
+	j, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+	err = config.CacheSetStr(modelkey, string(j))
+	if err != nil {
+		log.Printf("Could not set '%s' in cache: %s", modelkey, err)
+	}
+	return j, nil
+}
+
+func calculateMarbles(config *Config) ([]byte, error) {
+	modelkey := "marbles"
+	vals, err := config.CacheGet(modelkey)
+	if err != nil {
+		log.Println(err)
+		log.Println("Could not fetch scores from cache. Calculating...")
+	} else if len(vals) > 2 {
+		b, err := json.Marshal(vals)
+		if err != nil {
+			log.Println("Could not marshal Elo win ratings")
+		} else {
+			return b, nil
+		}
+	} else {
+		log.Println("Empty response. Calculating...")
+	}
+	matches, err := config.getMatches()
+	if err != nil {
+		return nil, err
+	}
+	pred := NewMarblePredictor()
+	//pred.Dampen()
+	batch := config.Conn.BeginBatch()
+	for _, match := range matches {
+		p := pred.Predict(match)
+		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
+			[]interface{}{match.Match.Key, modelkey, p},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.Float8OID},
+			nil,
+		)
+		pred.AddResult(match)
+	}
+	err = batch.Send(context.Background(), nil)
+	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(matches); i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting %s: %s", modelkey, err)
+		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
+	values := pred.CurrentValues()
+	j, err := json.Marshal(values)
+	if err != nil {
+		return nil, err
+	}
+	err = config.CacheSetStr(modelkey, string(j))
+	if err != nil {
+		log.Printf("Could not set '%s' in cache: %s", modelkey, err)
+	}
+	return j, nil
+}
+
+// TODO: This is redundant with calculateEloWins
 func calculateElo(config *Config) ([]byte, error) {
 	vals, err := config.CacheGet("eloscores")
 	if err != nil {

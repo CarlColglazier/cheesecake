@@ -15,6 +15,8 @@ func runServer(config Config) {
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/elo", config.CalcElo)
+	router.HandleFunc("/elowins", config.CalcEloWins)
+	router.HandleFunc("/marbles", config.CalcMarbles)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
@@ -46,6 +48,24 @@ func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {
 
 func (config *Config) CalcElo(w http.ResponseWriter, r *http.Request) {
 	j, err := calculateElo(config)
+	if err != nil {
+		log.Println(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(j)
+}
+
+func (config *Config) CalcEloWins(w http.ResponseWriter, r *http.Request) {
+	j, err := calculateEloWins(config)
+	if err != nil {
+		log.Println(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(j)
+}
+
+func (config *Config) CalcMarbles(w http.ResponseWriter, r *http.Request) {
+	j, err := calculateMarbles(config)
 	if err != nil {
 		log.Println(err)
 	}
