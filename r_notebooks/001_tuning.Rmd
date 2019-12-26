@@ -3,19 +3,12 @@ title: "Tuning variables."
 output: html_notebook
 ---
 
+## Elo Score Predictor
+
 Connect to the Cheesecake database to start pulling data.
 
 ```{r}
-library(DBI)
-library(tidyverse)
-
-con <- DBI::dbConnect(odbc::odbc(),
-                      Driver   = "PostgreSQL Unicode",
-                      Server   = "localhost",
-                      Database = "cheesecake",
-                      UID      = "postgres",
-                      PWD      = "postgres",
-                      Port     = 5432)
+source("shared.R")
 ```
 
 Get all matches (which are not ties).
@@ -37,5 +30,54 @@ results %>%
   mutate(correct = abs(winner - prediction) < 0.5) %>%
   group_by(gr=cut(prediction, breaks= seq(0, 1, by = 0.1)) ) %>%
   summarise(n= n(), c=mean(correct))
+```
+
+
+```{r}
+mean((results$prediction - results$winner)^2)
+```
+
+## Summary
+
+```{sql, connection=con}
+select
+	model,
+	avg(POWER((winning_alliance='red')::int - prediction, 2)) as brier,
+	count(*) filter 
+		(where (winning_alliance='red' and prediction > 0.5) or (winning_alliance='blue' and prediction < 0.5)) as correct,
+	count(*) as count
+from match
+inner join prediction_history on prediction_history.match=match.key
+where match.winning_alliance is not null and length(match.winning_alliance) > 0
+group by model
+```
+
+
+```{r}
+results <- dbGetQuery(con, "select m1.match, (match.winning_alliance='red')::int as winner, m1.prediction as eloscores, m2.prediction as marbles, m3.prediction as elowins
+	from match
+left join
+	(select match, prediction from prediction_history where model='eloscores') m1
+on (match.key = m1.match)
+left join
+	(select match, prediction from prediction_history ph where model='marbles') m2
+on (m1.match = m2.match)
+left join
+	(select match, prediction from prediction_history ph where model='elowins') m3
+on (m1.match = m3.match)
+where match.winning_alliance is not null and length(match.winning_alliance) > 0
+order by match.time")
+```
+
+
+```{r}
+filt <- results %>% select(winner, eloscores, marbles, elowins)
+filt$winner = as.factor(filt$winner)
+```
+
+```{r}
+logit <- glm(winner ~ marbles + eloscores, data=filt, family = "binomial")
+l_p <- predict(logit, newdata = filt, type="response")
+mean((l_p - results$winner)^2)
 ```
 
