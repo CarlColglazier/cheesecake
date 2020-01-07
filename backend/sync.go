@@ -11,29 +11,40 @@ import (
 	"sync"
 )
 
+// Upserts a list of teams into the database.
 func (config *Config) insertTeams(teamList []tba.Team) {
-	var teams [][]interface{}
+	batch := config.Conn.BeginBatch()
 	for _, row := range teamList {
-		teams = append(teams, []interface{}{
-			row.Key,
-			row.TeamNumber,
-			row.Name,
-		})
+		batch.Queue(
+			"insert into team (key, team_number, name) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT team_pkey DO UPDATE set team_number = $2, name = $3",
+			[]interface{}{row.Key, row.TeamNumber, row.Name},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.Int4OID, pgtype.VarcharOID},
+			nil,
+		)
 	}
-	copyCount, _ := config.Conn.CopyFrom(
-		pgx.Identifier{"team"},
-		[]string{"key", "team_number", "name"},
-		pgx.CopyFromRows(teams),
-	)
-	fmt.Println(copyCount)
+	err := batch.Send(context.Background(), nil)
+	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(teamList); i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting: %s", err)
+			return
+		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
 }
 
+// Upserts a list of events into the database.
 func (config *Config) insertEvents(eventList []tba.Event) {
 	var r [][]interface{}
 	for _, row := range eventList {
 		r = append(r, []interface{}{row.EndDate, row.Key, row.ShortName, row.Year})
 	}
-
 	_, err := config.Conn.CopyFrom(
 		pgx.Identifier{"event"},
 		[]string{"end_date", "key", "short_name", "year"},
@@ -41,6 +52,118 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 	)
 	if err != nil {
 		log.Println(err)
+	}
+}
+
+func (config *Config) insertMatches(matchList []tba.Match) {
+	batch := config.Conn.BeginBatch()
+	for _, row := range matchList {
+		batch.Queue(
+			"insert into match (key, comp_level, set_number, match_number, winning_alliance, event_key, time, actual_time, predicted_time, post_result_time, score_breakdown) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ON CONSTRAINT match_pkey DO NOTHING",
+			[]interface{}{
+				row.Key,
+				row.CompLevel,
+				row.SetNumber,
+				row.MatchNumber,
+				row.WinningAlliance,
+				row.EventKey,
+				row.Time,
+				row.ActualTime,
+				row.PredictedTime,
+				row.PostResultTime,
+				row.ScoreBreakdown,
+			},
+			[]pgtype.OID{
+				pgtype.VarcharOID,
+				pgtype.VarcharOID,
+				pgtype.Int4OID,
+				pgtype.Int4OID,
+				pgtype.VarcharOID,
+				pgtype.VarcharOID,
+				pgtype.Int4OID,
+				pgtype.Int4OID,
+				pgtype.Int4OID,
+				pgtype.Int4OID,
+				pgtype.JSONOID,
+			},
+			nil,
+		)
+		allianceId := row.Key + "_red"
+		batch.Queue(
+			"insert into alliance (key, score, color, match_key) values ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT alliance_pkey DO UPDATE set score = $2",
+			[]interface{}{
+				allianceId,
+				row.Alliances.Red.Score,
+				"red",
+				row.Key,
+			},
+			[]pgtype.OID{
+				pgtype.VarcharOID,
+				pgtype.Int4OID,
+				pgtype.VarcharOID,
+				pgtype.VarcharOID,
+			},
+			nil,
+		)
+		for _, team := range row.Alliances.Red.TeamKeys {
+			batch.Queue(
+				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
+				[]interface{}{
+					allianceId,
+					team,
+				},
+				[]pgtype.OID{
+					pgtype.VarcharOID,
+					pgtype.VarcharOID,
+				},
+				nil,
+			)
+		}
+		allianceId = row.Key + "_blue"
+		batch.Queue(
+			"insert into alliance (key, score, color, match_key) values ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT alliance_pkey DO UPDATE set score = $2",
+			[]interface{}{
+				allianceId,
+				row.Alliances.Blue.Score,
+				"blue",
+				row.Key,
+			},
+			[]pgtype.OID{
+				pgtype.VarcharOID,
+				pgtype.Int4OID,
+				pgtype.VarcharOID,
+				pgtype.VarcharOID,
+			},
+			nil,
+		)
+		for _, team := range row.Alliances.Blue.TeamKeys {
+			batch.Queue(
+				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
+				[]interface{}{
+					allianceId,
+					team,
+				},
+				[]pgtype.OID{
+					pgtype.VarcharOID,
+					pgtype.VarcharOID,
+				},
+				nil,
+			)
+		}
+	}
+	err := batch.Send(context.Background(), nil)
+	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(matchList)*9; i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting: %s", err)
+		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
 	}
 }
 
@@ -123,80 +246,14 @@ func reset(config *Config) {
 	}
 	config.insertTeams(teamList)
 	config.syncEvents()
-	rows, _ := config.Tba.GetAllEventMatches(2019)
-	var r [][]interface{}
-	var a [][]interface{}
-	var aTeams [][]interface{}
-	for _, row := range rows {
-		r = append(r, []interface{}{
-			row.Key,
-			row.CompLevel,
-			row.SetNumber,
-			row.MatchNumber,
-			row.WinningAlliance,
-			row.EventKey,
-			row.Time,
-			row.ActualTime,
-			row.PredictedTime,
-			row.PostResultTime,
-			row.ScoreBreakdown,
-		})
-		a = append(a, []interface{}{
-			row.Key + "_blue",
-			row.Alliances.Blue.Score,
-			"blue",
-			row.Key,
-		})
-		for _, team := range row.Alliances.Blue.TeamKeys {
-			aTeams = append(aTeams,
-				[]interface{}{
-					row.Key + "_blue",
-					team,
-				})
-		}
-		a = append(a, []interface{}{
-			row.Key + "_red",
-			row.Alliances.Red.Score,
-			"red",
-			row.Key,
-		})
-		for _, team := range row.Alliances.Red.TeamKeys {
-			aTeams = append(aTeams,
-				[]interface{}{
-					row.Key + "_red",
-					team,
-				})
-		}
+	// TODO: DO this per event?
+	//rows, _ := config.Tba.GetAllEventMatches(2019)
+	matchChan, _ := config.Tba.GetAllEventMatches(2019)
+	for matches := range matchChan {
+		config.insertMatches(matches)
 	}
-	copyCount, _ := config.Conn.CopyFrom(
-		pgx.Identifier{"match"},
-		[]string{
-			"key", "comp_level", "set_number", "match_number",
-			"winning_alliance", "event_key", "time", "actual_time",
-			"predicted_time", "post_result_time", "score_breakdown",
-		},
-		pgx.CopyFromRows(r),
-	)
-	fmt.Println(copyCount)
-	copyCount, _ = config.Conn.CopyFrom(
-		pgx.Identifier{"alliance"},
-		[]string{
-			"key", "score", "color", "match_key",
-		},
-		pgx.CopyFromRows(a),
-	)
-	fmt.Println(copyCount)
-	copyCount, err = config.Conn.CopyFrom(
-		pgx.Identifier{"alliance_teams"},
-		[]string{
-			"alliance_id", "team_key",
-		},
-		pgx.CopyFromRows(aTeams),
-	)
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println(copyCount)
+	//config.insertMatches(rows)
+	//
 	pred := NewEloScorePredictor()
 	fmt.Println("Calculating elo scores...")
 	_, err = calculatePredictor(config, pred, "eloscores")

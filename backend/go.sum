@@ -23,6 +23,8 @@ github.com/carlcolglazier/cheesecake/tba v0.0.0-20190724185551-a173c67442b4 h1:U
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20190724185551-a173c67442b4/go.mod h1:xrDwQgf4jFw25b3+mmVRj7kr50ufPjuMwpL/59HqwUU=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20191217221852-7ba58977bb0d h1:Czm2154aN5+IeemKmpxqFXox5rJfWaoK5sEu90Eo2+A=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20191217221852-7ba58977bb0d/go.mod h1:ktZiWwVMfdqsHIOHMwkL1uLhRdYds9qFl3uo848TC9M=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20200107000700-0b0a54fd91e3 h1:Y4LL0YSpZIOi6poVn3EJDdyjS4G59Qa8XuVGxopukM4=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20200107000700-0b0a54fd91e3/go.mod h1:ktZiWwVMfdqsHIOHMwkL1uLhRdYds9qFl3uo848TC9M=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58/go.mod h1:EOBUe0h4xcZ5GoxqC5SDxFQ8gwyZPKQoEzownBlhI80=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=

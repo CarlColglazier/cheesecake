@@ -79,10 +79,9 @@ CREATE TABLE prediction_history (
 );
 
 CREATE TABLE alliance_teams (
-	"position" SERIAL,
 	alliance_id varchar(25) NOT NULL,
 	team_key varchar(8) NOT NULL,
- 	CONSTRAINT alliance_teams_pkey PRIMARY KEY ("position", alliance_id, team_key),
+ 	CONSTRAINT alliance_teams_pkey PRIMARY KEY (alliance_id, team_key),
 	CONSTRAINT alliance_teams_alliance_id_fkey FOREIGN KEY (alliance_id) REFERENCES alliance(key),
 	CONSTRAINT alliance_teams_team_key_fkey FOREIGN KEY (team_key) REFERENCES team(key)
 );

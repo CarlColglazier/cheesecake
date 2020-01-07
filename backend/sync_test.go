@@ -50,6 +50,61 @@ func TestInsertTeams(t *testing.T) {
 	if num != 2 {
 		t.Errorf("Expected %v got %v", 2, num)
 	}
+	// Now try upserting.
+	teams = []tba.Team{
+		{Key: "frc1", TeamNumber: 1, Name: "One 1"},
+		{Key: "frc2", TeamNumber: 2, Name: "Two"},
+		{Key: "frc3", TeamNumber: 3, Name: "Three"},
+	}
+	config.insertTeams(teams)
+	rows, err = config.Conn.Query(`SELECT key, team_number, name FROM team`)
+	defer rows.Close()
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	var name string
+	b = rows.Next()
+	if b != true {
+		t.Errorf("No row returned for first line")
+	}
+	rows.Scan(&key, &num, &name)
+	if key != "frc1" {
+		t.Errorf("Expected %v got %v", "frc1", key)
+	}
+	if num != 1 {
+		t.Errorf("Expected %v got %v", 1, num)
+	}
+	if name != "One 1" {
+		t.Errorf("Expected %v got %v", "One 1", name)
+	}
+	b = rows.Next()
+	if b != true {
+		t.Errorf("No row returned for second line")
+	}
+	rows.Scan(&key, &num, &name)
+	if key != "frc2" {
+		t.Errorf("Expected %v got %v", "frc2", key)
+	}
+	if num != 2 {
+		t.Errorf("Expected %v got %v", 2, num)
+	}
+	if name != "Two" {
+		t.Errorf("Expected %v got %v", "Two", name)
+	}
+	b = rows.Next()
+	if b != true {
+		t.Errorf("No row returned for third line")
+	}
+	rows.Scan(&key, &num, &name)
+	if key != "frc3" {
+		t.Errorf("Expected %v got %v", "frc3", key)
+	}
+	if num != 3 {
+		t.Errorf("Expected %v got %v", 3, num)
+	}
+	if name != "Three" {
+		t.Errorf("Expected %v got %v", "Three", name)
+	}
 }
 
 func TestInsertEvents(t *testing.T) {

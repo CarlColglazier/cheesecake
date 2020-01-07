@@ -28,7 +28,6 @@ type Alliance struct {
 }
 
 type AllianceTeam struct {
-	Position   int    `db:"position" json:"position"`
 	AllianceId string `db:"alliance_id" json:"alliance_id"`
 	TeamKey    string `db:"team_key" json:"team_key"`
 }
@@ -100,7 +99,6 @@ where match.event_key = '` + event + `'`)
 			&alliance.Score,
 			&alliance.Color,
 			&alliance.MatchKey,
-			&aTeam.Position,
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
 			&prediction.Prediction,
@@ -164,7 +162,6 @@ where match.event_key like '2019%'`)
 			&alliance.Score,
 			&alliance.Color,
 			&alliance.MatchKey,
-			&aTeam.Position,
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
 		)
