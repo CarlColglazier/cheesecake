@@ -97,11 +97,7 @@ type Match struct {
 	PredictedTime   int64                  `json:"predicted_time"`
 	PostResultTime  int64                  `json:"post_result_time"`
 	ScoreBreakdown  map[string]interface{} `json:"score_breakdown"`
-	//ScoreBreakdown  struct {
-	//	Red  interface{} `json:"red"`
-	//	Blue interface{} `json:"blue"`
-	//} `json:"score_breakdown"`
-	Videos []struct {
+	Videos          []struct {
 		Type string `json:"type"`
 		Key  string `json:"key"`
 	} `json:"videos"`

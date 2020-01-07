@@ -60,17 +60,7 @@ func (tba *TheBlueAlliance) tbaRequest(url string) (string, error) {
 	if resp.StatusCode == 304 {
 		return val.Body, nil
 	} else if resp.StatusCode == 200 {
-		//respTime := resp.Header.Get("Last-Modified")
 		body, _ := ioutil.ReadAll(resp.Body)
-		//cacheEntry := TBACall{Modified: respTime, Body: string(body)}
-		/*marsh, err := json.Marshal(cacheEntry)
-		if err != nil {
-			log.Fatal("JSON Marshal", err)
-		}*/
-		//err = tba.pool.Do(radix.Cmd(nil, "SET", url, string(marsh)))
-		//if err != nil {
-		// log.Fatal("pool set", err)
-		//}
 		return string(body), nil
 	}
 	return "", errors.New("Page not found")
@@ -111,16 +101,14 @@ func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
 	return teamList, nil
 }
 
-func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
+func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error) {
 	events, err := tba.GetAllEvents(year)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	//fmt.Println("len events ", len(events))
 	channel := make(chan []Match)
 	for _, event := range events {
-		//fmt.Println(event.Key)
 		url := fmt.Sprintf("event/%s/matches", event.Key)
 		go func(url string) {
 			matchesString, _ := tba.tbaRequest(url)
@@ -129,12 +117,15 @@ func (tba *TheBlueAlliance) GetAllEventMatches(year int) ([]Match, error) {
 			channel <- matchList
 		}(url)
 	}
-	var matchList []Match
-	for i := 0; i < len(events); i++ {
-		matches := <-channel
-		matchList = append(matchList, matches...)
-	}
-	return matchList, nil
+	/*
+		var matchList []Match
+		for i := 0; i < len(events); i++ {
+			matches := <-channel
+			matchList = append(matchList, matches...)
+		}
+		return matchList, nil
+	*/
+	return channel, nil
 }
 
 func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
