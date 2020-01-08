@@ -246,14 +246,11 @@ func reset(config *Config) {
 	}
 	config.insertTeams(teamList)
 	config.syncEvents()
-	// TODO: DO this per event?
-	//rows, _ := config.Tba.GetAllEventMatches(2019)
-	matchChan, _ := config.Tba.GetAllEventMatches(2019)
-	for matches := range matchChan {
+	matchChan, _, numEvents := config.Tba.GetAllEventMatches(2019)
+	for i := 0; i < numEvents; i++ {
+		matches := <-matchChan
 		config.insertMatches(matches)
 	}
-	//config.insertMatches(rows)
-	//
 	pred := NewEloScorePredictor()
 	fmt.Println("Calculating elo scores...")
 	_, err = calculatePredictor(config, pred, "eloscores")
