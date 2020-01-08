@@ -101,11 +101,11 @@ func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
 	return teamList, nil
 }
 
-func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error) {
+func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error, int) {
 	events, err := tba.GetAllEvents(year)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return nil, err, 0
 	}
 	channel := make(chan []Match)
 	for _, event := range events {
@@ -117,15 +117,7 @@ func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error) {
 			channel <- matchList
 		}(url)
 	}
-	/*
-		var matchList []Match
-		for i := 0; i < len(events); i++ {
-			matches := <-channel
-			matchList = append(matchList, matches...)
-		}
-		return matchList, nil
-	*/
-	return channel, nil
+	return channel, nil, len(events)
 }
 
 func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
