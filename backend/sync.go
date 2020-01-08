@@ -248,7 +248,7 @@ func reset(config *Config) {
 	config.syncEvents()
 	matchChan, _, numEvents := config.Tba.GetAllEventMatches(2019)
 	for i := 0; i < numEvents; i++ {
-		log.Printf("Upserting event #%d", i)
+		log.Printf("Upserting event #%d of %d", i, numEvents)
 		matches := <-matchChan
 		config.insertMatches(matches)
 	}
