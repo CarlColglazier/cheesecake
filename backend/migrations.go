@@ -13,7 +13,7 @@ import (
 func (config *Config) Migrate(db, database string) {
 	m, err := migrate.New(
 		"file://migrations",
-		"postgres://postgres:postgres@"+db+":5432/"+database+"?sslmode=disable")
+		"postgres://cheese:cheesepass4279@"+db+":5432/"+database+"?sslmode=disable")
 	if err != nil {
 		log.Println("Could not connect for migration.")
 		log.Println(err)
