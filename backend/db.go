@@ -9,8 +9,8 @@ func Connect(host, applicationName string) (*pgx.ConnPool, error) {
 	runtimeParams = make(map[string]string)
 	runtimeParams["application_name"] = applicationName
 	connConfig := pgx.ConnConfig{
-		User:              "postgres",
-		Password:          "postgres",
+		User:              "cheese",
+		Password:          "cheesepass4279",
 		Host:              host,
 		Port:              5432,
 		Database:          applicationName,
