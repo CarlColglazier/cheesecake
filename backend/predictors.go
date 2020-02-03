@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 	"io/ioutil"
@@ -25,7 +26,7 @@ func ReadEloRecords() (map[string]float64, error) {
 /// Predictor provides functions for updating results and
 /// returning match predictions.
 type Predictor interface {
-	Predict(MatchEntry) float64
+	Predict(MatchEntry) map[string]interface{}
 	AddResult(MatchEntry)
 	CurrentValues() map[string]float64
 	Dampen()
@@ -44,6 +45,20 @@ func NewEloScorePredictor() *EloScorePredictor {
 	return &EloScorePredictor{scores}
 }
 
+func NewEloScorePredictorFromCache(scores map[string]interface{}) *EloScorePredictor {
+	mapString := make(map[string]float64)
+	for key, value := range scores {
+		strKey := fmt.Sprintf("%v", key)
+		//val := float64(value)
+		val, ok := value.(float64)
+		if !ok {
+			val = 0.0
+		}
+		mapString[strKey] = val
+	}
+	return &EloScorePredictor{mapString}
+}
+
 func (pred *EloScorePredictor) Dampen() {
 	for k, v := range pred.current {
 		pred.current[k] = 0.5*v + 15
@@ -54,7 +69,7 @@ func (pred *EloScorePredictor) CurrentValues() map[string]float64 {
 	return pred.current
 }
 
-func (pred *EloScorePredictor) Predict(me MatchEntry) float64 {
+func (pred *EloScorePredictor) Predict(me MatchEntry) map[string]interface{} {
 	elos := make(map[string]float64)
 	elos["red"] = 0.0
 	elos["blue"] = 0.0
@@ -69,13 +84,19 @@ func (pred *EloScorePredictor) Predict(me MatchEntry) float64 {
 		}
 		elos[key] /= float64(len(val.Teams))
 	}
-	return EloPredict(elos["red"], elos["blue"])
+	//return EloPredict(elos["red"], elos["blue"])
+	red := EloPredict(elos["red"], elos["blue"])
+	ret := make(map[string]interface{})
+	ret["red"] = red
+	ret["blue"] = 1 - red
+	return ret
 }
 
 func (pred *EloScorePredictor) AddResult(me MatchEntry) {
 	std := 21.1
 	k := 12.0
-	odds := pred.Predict(me)
+	oddsMap := pred.Predict(me)
+	odds, _ := oddsMap["red"].(float64)
 	randx := rand.NewSource(372984243789)
 	dist := distuv.Normal{0.0, std, randx}
 	diff, err := me.Diff()
@@ -128,9 +149,12 @@ func (mp *MarblePredictor) teamMarbles(me MatchEntry) map[string]float64 {
 	return marbles
 }
 
-func (mp *MarblePredictor) Predict(me MatchEntry) float64 {
+func (mp *MarblePredictor) Predict(me MatchEntry) map[string]interface{} {
 	marbles := mp.teamMarbles(me)
-	return marbles["red"] / (marbles["red"] + marbles["blue"])
+	ret := make(map[string]interface{})
+	ret["red"] = marbles["red"] / (marbles["red"] + marbles["blue"])
+	ret["blue"] = marbles["blue"] / (marbles["red"] + marbles["blue"])
+	return ret
 }
 
 func (mp *MarblePredictor) AddResult(me MatchEntry) {

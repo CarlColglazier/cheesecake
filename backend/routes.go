@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-func runServer(config Config) {
+func runServer(config *Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)

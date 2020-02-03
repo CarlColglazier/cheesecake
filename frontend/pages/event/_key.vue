@@ -13,6 +13,9 @@
 					<b-th colspan="2">
 						Score
 					</b-th>
+					<b-th colspan="2">
+						Rocket
+					</b-th>
 				</b-tr>
 			</b-thead>
 			<b-tbody>
@@ -47,7 +50,7 @@
 							{{ d.alliances.red.alliance.score }}
 						</span>
 						<span class="break">
-							{{ displayPrediction(d.predictions.elo_score.prediction, 'red') }}
+							{{ displayPrediction(d.predictions.elo_score.prediction.red, 'red') }}
 						</span>
 					</b-td>
 					<b-td>
@@ -56,9 +59,17 @@
 						</span>
 						<span class="break">
 							{{
-								displayPrediction(d.predictions.elo_score.prediction, 'blue')
+								displayPrediction(d.predictions.elo_score.prediction.red, 'blue')
 							}}
 						</span>
+					</b-td>
+					<b-td>
+						<span class="break">{{ roundPred(d.predictions.rocket.prediction.red) }}</span>
+						<span class="break">{{ rankPoints(d.match.score_breakdown.red.completeRocketRankingPoint) }}</span>
+					</b-td>
+					<b-td>
+						<span class="break">{{ roundPred(d.predictions.rocket.prediction.blue) }}</span>
+						<span class="break">{{ rankPoints(d.match.score_breakdown.blue.completeRocketRankingPoint) }}</span>
 					</b-td>
 				</b-tr>
 			</b-tbody>
@@ -94,6 +105,10 @@ function prediction(num, color) {
 	return ''
 }
 
+function roundPred(num) {
+	return `${Math.round(num * 100)}%`
+}
+
 export default {
 	layout: 'default',
 	async asyncData(context) {
@@ -108,7 +123,8 @@ export default {
 	},
 	methods: {
 		rankPoints: rankPoints,
-		displayPrediction: prediction
+		displayPrediction: prediction,
+		roundPred: roundPred
 	}
 }
 </script>

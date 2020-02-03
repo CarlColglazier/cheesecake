@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
@@ -53,6 +53,18 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func (config *Config) version() int {
+	row, err := config.Conn.Query("select \"version\" from schema_migrations")
+	if err != nil {
+		return 0
+	}
+	defer row.Close()
+	row.Next()
+	var n int
+	row.Scan(&n)
+	return n
 }
 
 func (config *Config) insertMatches(matchList []tba.Match) {
@@ -181,6 +193,7 @@ func (config *Config) syncEvents() {
 	wg.Wait()
 }
 
+// TODO: Change this loop to run within config?
 func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte, error) {
 	vals, err := config.CacheGet(modelkey)
 	if err != nil {
@@ -206,7 +219,7 @@ func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte
 		p := pred.Predict(match)
 		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
 			[]interface{}{match.Match.Key, modelkey, p},
-			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.Float8OID},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.JSONOID},
 			nil,
 		)
 		pred.AddResult(match)
@@ -252,10 +265,11 @@ func reset(config *Config) {
 		matches := <-matchChan
 		config.insertMatches(matches)
 	}
-	pred := NewEloScorePredictor()
-	fmt.Println("Calculating elo scores...")
-	_, err = calculatePredictor(config, pred, "eloscores")
-	if err != nil {
-		log.Println(err)
+	// Sync predictors
+	for key, val := range config.predictors {
+		_, err = calculatePredictor(config, val, key)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
