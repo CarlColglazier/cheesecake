@@ -11,6 +11,9 @@
 						Score
 					</b-th>
 					<b-th colspan="2">
+						Hab
+					</b-th>
+					<b-th colspan="2">
 						Rocket
 					</b-th>
 					<b-th>
@@ -37,12 +40,15 @@
 					</b-td>
 					<b-td>{{ d.alliances.red.alliance.score }}</b-td>
 					<b-td>{{ displayPrediction(d.predictions.elo_score.prediction.red) }}</b-td>
+					<b-td>{{ rankPoints(d.match.score_breakdown.red.habDockingRankingPoint) }}</b-td>
+					<b-td>{{ displayPrediction(d.predictions.hab.prediction.red) }}</b-td>
 					<b-td>{{ rankPoints(d.match.score_breakdown.red.completeRocketRankingPoint) }}</b-td>
 					<b-td>{{ displayPrediction(d.predictions.rocket.prediction.red) }}</b-td>
-					<b-td>{{
+					<b-td>({{
 								(2 * d.predictions.elo_score.prediction.red +
-								d.predictions.rocket.prediction.red).toFixed(2)
-								}}</b-td>
+									d.predictions.hab.prediction.red +
+									d.predictions.rocket.prediction.red).toFixed(2)
+								}})</b-td>
 				</b-tr>
 				<b-tr>
 					<b-td></b-td>
@@ -56,12 +62,15 @@
 					</b-td>
 					<b-td>{{ d.alliances.blue.alliance.score }}</b-td>
 					<b-td>{{ displayPrediction(d.predictions.elo_score.prediction.blue) }}</b-td>
+					<b-td>{{ rankPoints(d.match.score_breakdown.blue.habDockingRankingPoint) }}</b-td>
+					<b-td>{{ displayPrediction(d.predictions.hab.prediction.blue) }}</b-td>
 					<b-td>{{ rankPoints(d.match.score_breakdown.blue.completeRocketRankingPoint) }}</b-td>
 					<b-td>{{ displayPrediction(d.predictions.rocket.prediction.blue) }}</b-td>
-					<b-td>{{
+					<b-td>({{
 								(2 * d.predictions.elo_score.prediction.blue +
-								d.predictions.rocket.prediction.blue).toFixed(2)
-								}}</b-td>
+									d.predictions.hab.prediction.blue +
+									d.predictions.rocket.prediction.blue).toFixed(2)
+								}})</b-td>
 				</b-tr>
 			</b-tbody>
 		</b-table-simple>

@@ -61,16 +61,6 @@ func main() {
 	}
 	eloPred := NewEloScorePredictorFromCache(scores)
 	config.predictors["eloscore"] = eloPred
-	// HabDockingRankingPoint predictor
-	// BetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
-	// ---
-	/*
-		scores, err := config.CacheGet("pred_habDockingRP")
-		if err != nil {
-			log.Println("Could not get elo scores from cache.")
-			scores = make(map[string]interface{})
-		}
-	*/
 	config.predictors["rocket"] = NewBetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
 	config.predictors["hab"] = NewBetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
 	// ---

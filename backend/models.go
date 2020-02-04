@@ -74,11 +74,12 @@ func (me *MatchEntry) Diff() (int, error) {
 
 func (config *Config) getEventMatches(event string) ([]MatchEntry, error) {
 	rows, err := config.Conn.Query(
-		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phr.prediction as RocketPrediction FROM match
+		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phr.prediction as RocketPrediction, phh.prediction as HabPrediction FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
 LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'eloscore'
 LEFT JOIN prediction_history phr on phr."match" = alliance.match_key and phr.model = 'rocket'
+LEFT JOIN prediction_history phh on phh."match" = alliance.match_key and phh.model = 'hab'
 where match.event_key = '` + event + `'`)
 	if err != nil {
 		return nil, err
@@ -91,6 +92,7 @@ where match.event_key = '` + event + `'`)
 		var aTeam AllianceTeam
 		var eloPrediction PredictionHistory
 		var rocketPrediction PredictionHistory
+		var habPrediction PredictionHistory
 		rows.Scan(
 			&match.Key,
 			&match.CompLevel,
@@ -111,6 +113,7 @@ where match.event_key = '` + event + `'`)
 			&aTeam.TeamKey,
 			&eloPrediction.Prediction,
 			&rocketPrediction.Prediction,
+			&habPrediction.Prediction,
 		)
 		if _, ok := matches[match.Key]; !ok {
 			dict := make(map[string]*AllianceEntry)
@@ -128,6 +131,7 @@ where match.event_key = '` + event + `'`)
 		)
 		matches[key].Predictions["elo_score"] = &eloPrediction
 		matches[key].Predictions["rocket"] = &rocketPrediction
+		matches[key].Predictions["hab"] = &habPrediction
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()

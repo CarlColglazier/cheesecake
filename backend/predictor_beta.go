@@ -43,7 +43,7 @@ func (pred *BetaPredictor) getTeamBetaPred(key string) float64 {
 	}
 	// alpha plus hits over beta plus misses
 	return ((pred.a + float64(pred.success[key])) /
-		(pred.b + float64(pred.attempts[key]) - float64(pred.success[key])))
+		(pred.a + pred.b + float64(pred.attempts[key])))
 }
 
 func (pred *BetaPredictor) Predict(me MatchEntry) map[string]interface{} {
@@ -63,6 +63,9 @@ func (pred *BetaPredictor) Predict(me MatchEntry) map[string]interface{} {
 }
 
 func (pred *BetaPredictor) AddResult(me MatchEntry) {
+	if me.Match.CompLevel != "qm" {
+		return
+	}
 	breakdown := me.Match.ScoreBreakdown
 	for key, val := range me.Alliances {
 		bd, ok := breakdown[key].(map[string]interface{})
