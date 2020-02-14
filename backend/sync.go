@@ -181,7 +181,7 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 
 func (config *Config) syncEvents() {
 	var wg sync.WaitGroup
-	for i := 2003; i <= 2019; i++ {
+	for i := 2003; i <= 2020; i++ {
 		go func(year int) {
 			defer wg.Done()
 			rows, _ := config.Tba.GetAllEvents(year)
@@ -259,7 +259,8 @@ func reset(config *Config) {
 	}
 	config.insertTeams(teamList)
 	config.syncEvents()
-	matchChan, _, numEvents := config.Tba.GetAllEventMatches(2019)
+	// Sync 2020 events.
+	matchChan, _, numEvents := config.Tba.GetAllEventMatches(2020)
 	for i := 0; i < numEvents; i++ {
 		log.Printf("Upserting event #%d of %d", i, numEvents)
 		matches := <-matchChan

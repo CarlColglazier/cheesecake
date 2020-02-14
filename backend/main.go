@@ -61,8 +61,8 @@ func main() {
 	}
 	eloPred := NewEloScorePredictorFromCache(scores)
 	config.predictors["eloscore"] = eloPred
-	config.predictors["rocket"] = NewBetaPredictor(0.5, 12.0, "completeRocketRankingPoint")
-	config.predictors["hab"] = NewBetaPredictor(0.7229, 2.4517, "habDockingRankingPoint")
+	config.predictors["rocket"] = NewBetaPredictor(0.5, 12.0, "completeRocketRankingPoint", 2019)
+	config.predictors["hab"] = NewBetaPredictor(0.7229, 2.4517, "habDockingRankingPoint", 2019)
 	// ---
 	// Check: do we need to reset?
 	dbVersion := config.version()

@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func runServer(config *Config) {
@@ -14,6 +15,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
+	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/elo", config.CalcEloScores)
 	router.HandleFunc("/marbles", config.CalcMarbles)
 	router.HandleFunc("/brier", config.Brier)
@@ -38,7 +40,21 @@ func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request)
 }
 
 func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {
-	events, err := config.getEvents()
+	events, err := config.getEvents(2019)
+	if err != nil {
+		log.Println(err)
+	}
+	json.NewEncoder(w).Encode(events)
+}
+
+func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	year, err := strconv.Atoi(vars["year"])
+	if err != nil {
+		log.Println(err)
+		json.NewEncoder(w).Encode("{}")
+	}
+	events, err := config.getEvents(year)
 	if err != nil {
 		log.Println(err)
 	}

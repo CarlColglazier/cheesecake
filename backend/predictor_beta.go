@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"math"
+	"strconv"
 )
 
 type BetaPredictor struct {
@@ -11,12 +12,13 @@ type BetaPredictor struct {
 	a            float64
 	b            float64
 	breakdownKey string
+	year         int
 }
 
-func NewBetaPredictor(a, b float64, breakdownKey string) *BetaPredictor {
+func NewBetaPredictor(a, b float64, breakdownKey string, year int) *BetaPredictor {
 	succ := make(map[string]int)
 	att := make(map[string]int)
-	return &BetaPredictor{succ, att, a, b, breakdownKey}
+	return &BetaPredictor{succ, att, a, b, breakdownKey, year}
 }
 
 /*
@@ -63,6 +65,9 @@ func (pred *BetaPredictor) Predict(me MatchEntry) map[string]interface{} {
 }
 
 func (pred *BetaPredictor) AddResult(me MatchEntry) {
+	if me.Match.Key[0:4] != strconv.Itoa(pred.year) {
+		return
+	}
 	if me.Match.CompLevel != "qm" {
 		return
 	}

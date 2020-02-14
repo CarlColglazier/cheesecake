@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/pkg/errors"
 	"sort"
+	"strconv"
 )
 
 // Match represents a single match in both the database and the API.
@@ -209,9 +210,8 @@ where match.event_key like '2019%'`)
 	return list, nil
 }
 
-func (config *Config) getEvents() ([]Event, error) {
-	rows, err := config.Conn.Query(`SELECT key, short_name FROM event
-where event.key like '2019%'`)
+func (config *Config) getEvents(year int) ([]Event, error) {
+	rows, err := config.Conn.Query("SELECT key, short_name FROM event where event.year=" + strconv.Itoa(year))
 	defer rows.Close()
 	if err != nil {
 		return nil, err
