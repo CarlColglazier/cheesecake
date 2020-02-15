@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/jackc/pgx"
 	"github.com/joho/godotenv"
@@ -63,16 +63,20 @@ func main() {
 	config.predictors["eloscore"] = eloPred
 	config.predictors["rocket"] = NewBetaPredictor(0.5, 12.0, "completeRocketRankingPoint", 2019)
 	config.predictors["hab"] = NewBetaPredictor(0.7229, 2.4517, "habDockingRankingPoint", 2019)
+	config.predictors["shieldop"] = NewBetaPredictor(0.5, 12.0, "shieldOperationalRankingPoint", 2020)
+	config.predictors["shieldeng"] = NewBetaPredictor(0.5, 12.0, "shieldEnergizedRankingPoint", 2020)
 	// ---
 	// Check: do we need to reset?
 	dbVersion := config.version()
 	if dbVersion == 0 {
 		reset(config)
-		vals := config.predictors["eloscore"].CurrentValues()
-		b, err := json.Marshal(vals)
-		if err != nil {
-			config.CacheSetStr("pred_eloscores", string(b))
-		}
+		/*
+			vals := config.predictors["eloscore"].CurrentValues()
+			b, err := json.Marshal(vals)
+			if err != nil {
+				config.CacheSetStr("pred_eloscores", string(b))
+			}
+		*/
 	}
 	// Parse command line input
 	args := os.Args[1:]

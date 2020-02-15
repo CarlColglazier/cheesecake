@@ -1,9 +1,15 @@
 <template>
 	<content>
 		<h1>{{ $nuxt.$route.params.key }}</h1>
-		<h2>Breakdown for {{ $nuxt.$route.params.key }}</h2>
-		<BreakdownTable2019 v-if="yearMatch(2019)" v-bind:matches="matches" />
-		<BreakdownTable2020 v-if="yearMatch(2020)" v-bind:matches="matches" />
+		<section v-if="matches && matches.length > 0">
+			<p v-if="yearMatch(2020)">Note: this model has still not been fully calibrated for the 2020 game.</p>
+			<h2>Breakdown for {{ $nuxt.$route.params.key }}</h2>
+			<BreakdownTable2019 v-if="yearMatch(2019)" v-bind:matches="matches" />
+			<BreakdownTable2020 v-if="yearMatch(2020)" v-bind:matches="matches" />
+		</section>
+		<secion v-else>
+			<p>No schedule for this event quite yet.</p>
+		</secion>
 	</content>
 </template>
 

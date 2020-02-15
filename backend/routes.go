@@ -84,14 +84,14 @@ func (config *Config) CalcMarbles(w http.ResponseWriter, r *http.Request) {
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.Conn.Query(
 		`select 
-	avg(POWER((winning_alliance='red')::int - prediction, 2)) as brier,
+  avg(power((winning_alliance='red')::int - (prediction->'red')::text::float, 2)) as brier,
 	count(*) filter 
-		(where (winning_alliance='red' and prediction > 0.5) or (winning_alliance='blue' and prediction < 0.5)) as correct,
+		(where (winning_alliance='red' and (prediction->'red')::text::float > 0.5) or (winning_alliance='blue' and (prediction->'red')::text::float < 0.5)) as correct,
 	count(*) as count
 from match
 inner join prediction_history on prediction_history."match"=match."key"
 where match.winning_alliance is not null and length(match.winning_alliance) > 0
-and model='eloscores'`,
+and model='eloscores' and match.event_key like '2019%'`,
 	)
 	if err != nil {
 		log.Println(err)

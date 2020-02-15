@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
-	// "fmt"
 	"github.com/carlcolglazier/cheesecake/tba"
-	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/pgtype"
 	"log"
+	"regexp"
 	"sync"
 )
 
@@ -41,16 +40,29 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 
 // Upserts a list of events into the database.
 func (config *Config) insertEvents(eventList []tba.Event) {
-	var r [][]interface{}
+	batch := config.Conn.BeginBatch()
 	for _, row := range eventList {
-		r = append(r, []interface{}{row.EndDate, row.Key, row.ShortName, row.Year})
+		batch.Queue(
+			"INSERT INTO event (key, end_date, event_type, short_name, year) values ($1, $2, $3, $4, $5) ON CONFLICT ON CONSTRAINT event_pkey DO UPDATE set end_date = $2, event_type = $3, short_name = $4, year = $5",
+			[]interface{}{row.Key, row.EndDate, row.EventType, row.ShortName, row.Year},
+			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.Int4OID, pgtype.VarcharOID, pgtype.Int4OID},
+			nil,
+		)
 	}
-	_, err := config.Conn.CopyFrom(
-		pgx.Identifier{"event"},
-		[]string{"end_date", "key", "short_name", "year"},
-		pgx.CopyFromRows(r),
-	)
+	err := batch.Send(context.Background(), nil)
 	if err != nil {
+		log.Printf("Error sending batch: %s", err)
+	}
+	for i := 0; i < len(eventList); i++ {
+		_, err := batch.ExecResults()
+		if err != nil {
+			log.Printf("Error upserting: %s", err)
+			return
+		}
+	}
+	err = batch.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
 		log.Println(err)
 	}
 }
@@ -69,6 +81,10 @@ func (config *Config) version() int {
 
 func (config *Config) insertMatches(matchList []tba.Match) {
 	batch := config.Conn.BeginBatch()
+	reg, err := regexp.Compile("[^0-9]+")
+	if err != nil {
+		log.Println(err)
+	}
 	for _, row := range matchList {
 		batch.Queue(
 			"insert into match (key, comp_level, set_number, match_number, winning_alliance, event_key, time, actual_time, predicted_time, post_result_time, score_breakdown) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ON CONSTRAINT match_pkey DO NOTHING",
@@ -118,6 +134,11 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			nil,
 		)
 		for _, team := range row.Alliances.Red.TeamKeys {
+			if reg.Match([]byte(team[3:])) {
+				//log.Println(team)
+				team = "frc9990"
+				//log.Println(team)
+			}
 			batch.Queue(
 				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
 				[]interface{}{
@@ -149,6 +170,9 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			nil,
 		)
 		for _, team := range row.Alliances.Blue.TeamKeys {
+			if reg.Match([]byte(team[3:])) {
+				team = "frc9990"
+			}
 			batch.Queue(
 				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
 				[]interface{}{
@@ -163,7 +187,7 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			)
 		}
 	}
-	err := batch.Send(context.Background(), nil)
+	err = batch.Send(context.Background(), nil)
 	if err != nil {
 		log.Printf("Error sending batch: %s", err)
 	}
@@ -184,7 +208,7 @@ func (config *Config) syncEvents() {
 	for i := 2003; i <= 2020; i++ {
 		go func(year int) {
 			defer wg.Done()
-			rows, _ := config.Tba.GetAllEvents(year)
+			rows, _ := config.Tba.GetAllOfficialEvents(year)
 			config.insertEvents(rows)
 		}(i)
 
@@ -195,20 +219,22 @@ func (config *Config) syncEvents() {
 
 // TODO: Change this loop to run within config?
 func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte, error) {
-	vals, err := config.CacheGet(modelkey)
-	if err != nil {
-		log.Println(err)
-		log.Println("Could not fetch scores from cache. Calculating...")
-	} else if len(vals) > 2 {
-		b, err := json.Marshal(vals)
+	/*
+		vals, err := config.CacheGet(modelkey)
 		if err != nil {
-			log.Println("Could not marshal Elo win ratings")
+			log.Println(err)
+			log.Println("Could not fetch scores from cache. Calculating...")
+		} else if len(vals) > 2 {
+			b, err := json.Marshal(vals)
+			if err != nil {
+				log.Println("Could not marshal Elo win ratings")
+			} else {
+				return b, nil
+			}
 		} else {
-			return b, nil
+			log.Println("Empty response. Calculating...")
 		}
-	} else {
-		log.Println("Empty response. Calculating...")
-	}
+	*/
 	matches, err := config.getMatches()
 	if err != nil {
 		return nil, err
@@ -222,7 +248,9 @@ func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte
 			[]pgtype.OID{pgtype.VarcharOID, pgtype.VarcharOID, pgtype.JSONOID},
 			nil,
 		)
-		pred.AddResult(match)
+		if match.Official {
+			pred.AddResult(match)
+		}
 	}
 	err = batch.Send(context.Background(), nil)
 	if err != nil {
@@ -259,12 +287,17 @@ func reset(config *Config) {
 	}
 	config.insertTeams(teamList)
 	config.syncEvents()
-	// Sync 2020 events.
-	matchChan, _, numEvents := config.Tba.GetAllEventMatches(2020)
-	for i := 0; i < numEvents; i++ {
-		log.Printf("Upserting event #%d of %d", i, numEvents)
-		matches := <-matchChan
-		config.insertMatches(matches)
+	// Sync 2019-2020 events.
+	for year := 2019; year <= 2020; year++ {
+		matchChan, _, numEvents := config.Tba.GetAllEventMatches(year)
+		for i := 0; i < numEvents; i++ {
+			log.Printf("Upserting event #%d of %d", i, numEvents)
+			matches := <-matchChan
+			if len(matches) > 0 {
+				log.Printf(matches[0].Key)
+			}
+			config.insertMatches(matches)
+		}
 	}
 	// Sync predictors
 	for key, val := range config.predictors {
