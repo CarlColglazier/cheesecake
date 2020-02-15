@@ -137,7 +137,7 @@ func (tba *TheBlueAlliance) GetAllOfficialEvents(year int) ([]Event, error) {
 	}
 	var eventSlice []Event
 	for i := range e {
-		if e[i].EventType >= 0 && e[i].EventType <= 6 {
+		if e[i].EventType != -1 && e[i].EventType != 99 {
 			eventSlice = append(eventSlice, e[i])
 		}
 	}
