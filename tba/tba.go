@@ -128,11 +128,11 @@ func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
 	var e []Event
 	err = json.Unmarshal([]byte(events), &e)
 	// Keep only official events.
-	return events, err
+	return e, err
 }
 
 func (tba *TheBlueAlliance) GetAllOfficialEvents(year int) ([]Event, error) {
-	events, err := tba.GetAllEvents(year)
+	e, err := tba.GetAllEvents(year)
 	if err != nil {
 		return nil, err
 	}
