@@ -102,7 +102,7 @@ func (tba *TheBlueAlliance) GetAllTeams() ([]Team, error) {
 }
 
 func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error, int) {
-	events, err := tba.GetAllEvents(year)
+	events, err := tba.GetAllOfficialEvents(year)
 	if err != nil {
 		log.Println(err)
 		return nil, err, 0
@@ -127,7 +127,6 @@ func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
 	}
 	var e []Event
 	err = json.Unmarshal([]byte(events), &e)
-	// Keep only official events.
 	return e, err
 }
 
