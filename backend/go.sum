@@ -23,6 +23,8 @@ github.com/bkaradzic/go-lz4 v1.0.0/go.mod h1:0YdlkowM3VswSROI7qDxhRvJ3sLhlFrRRwj
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215204734-eb1c87356307 h1:fUg/tj/oCTbjkY7yIIvkWM+gH3E671BJPTDcIj6YjZo=
 github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215204734-eb1c87356307/go.mod h1:ktZiWwVMfdqsHIOHMwkL1uLhRdYds9qFl3uo848TC9M=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215213635-3f945af0d74e h1:KcEZe++7+WE2rlgEoqIWpAPrDqlk99KvVc1HEH1YKuo=
+github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215213635-3f945af0d74e/go.mod h1:Sa1kBeEiv+vR+rd/qkAr1ZmVs+vxMzxRjTIAPf3SxVI=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58/go.mod h1:EOBUe0h4xcZ5GoxqC5SDxFQ8gwyZPKQoEzownBlhI80=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=

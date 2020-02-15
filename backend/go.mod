@@ -3,7 +3,7 @@ module github.com/carlcolglazier/cheesecake/backend
 go 1.13
 
 require (
-	github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215204734-eb1c87356307
+	github.com/carlcolglazier/cheesecake/tba v0.0.0-20200215213635-3f945af0d74e
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/golang-migrate/migrate/v4 v4.8.0
 	github.com/gorilla/handlers v1.4.2
