@@ -10,10 +10,10 @@
 					Score
 				</b-th>
 				<b-th colspan="2">
-					RP1
+					Energized
 				</b-th>
 				<b-th colspan="2">
-					RP2
+					Shield
 				</b-th>
 				<b-th>
 					Rank Points
@@ -32,12 +32,17 @@
 				<b-td>
 					<span
 						v-for="team in d.alliances.red.teams"
-									 :key="team"
+						:key="team"
 					>
 						{{ team.substring(3) }}
 					</span>
 				</b-td>
 				<b-td>{{ d.alliances.red.alliance.score }}</b-td>
+				<b-td>({{ roundPred(d.predictions.elo_score.prediction.red) }})</b-td>
+				<b-td>{{ rankPoints(d.match.score_breakdown.red.shieldEnergizedRankingPoint) }}</b-td>
+				<b-td>({{ roundPred(d.predictions.energized.prediction.red) }})</b-td>
+				<b-td>{{ rankPoints(d.match.score_breakdown.red.shieldOperationalRankingPoint) }}</b-td>
+				<b-td>({{ roundPred(d.predictions.shield.prediction.red) }})</b-td>
 			</b-tr>
 			<b-tr>
 				<b-td></b-td>
@@ -50,6 +55,11 @@
 					</span>
 				</b-td>
 				<b-td>{{ d.alliances.blue.alliance.score }}</b-td>
+				<b-td>({{ roundPred(d.predictions.elo_score.prediction.blue) }})</b-td>
+				<b-td>{{ rankPoints(d.match.score_breakdown.blue.shieldEnergizedRankingPoint) }}</b-td>
+				<b-td>({{ roundPred(d.predictions.energized.prediction.blue) }})</b-td>
+				<b-td>{{ rankPoints(d.match.score_breakdown.blue.shieldOperationalRankingPoint) }}</b-td>
+				<b-td>({{ roundPred(d.predictions.shield.prediction.blue) }})</b-td>
 			</b-tr>
 		</b-tbody>
 	</b-table-simple>

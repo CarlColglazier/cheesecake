@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 func runServer(config *Config) {
@@ -17,7 +18,6 @@ func runServer(config *Config) {
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/elo", config.CalcEloScores)
-	router.HandleFunc("/marbles", config.CalcMarbles)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
@@ -32,7 +32,16 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	matches, err := config.getEventMatches(vars["event"])
+	year := vars["event"][0:4]
+	var matches []MatchEntry
+	var err error
+	if year == "2020" {
+		matches, err = config.getEventMatches2020(vars["event"])
+	} else if year == "2019" {
+		matches, err = config.getEventMatches2019(vars["event"])
+	} else {
+		matches, err = config.getEventMatches2019(vars["event"])
+	}
 	if err != nil {
 		log.Println(err)
 	}
@@ -62,18 +71,8 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) CalcEloScores(w http.ResponseWriter, r *http.Request) {
-	pred := NewEloScorePredictor()
-	j, err := calculatePredictor(config, pred, "eloscores")
-	if err != nil {
-		log.Println(err)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(j)
-}
-
-func (config *Config) CalcMarbles(w http.ResponseWriter, r *http.Request) {
-	pred := NewMarblePredictor()
-	j, err := calculatePredictor(config, pred, "marbles")
+	pred := NewEloScoreModel(2019)
+	j, err := calculateModel(config, pred, "eloscores")
 	if err != nil {
 		log.Println(err)
 	}
@@ -82,7 +81,7 @@ func (config *Config) CalcMarbles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.Conn.Query(
+	rows, err := config.conn.Query(
 		`select 
   avg(power((winning_alliance='red')::int - (prediction->'red')::text::float, 2)) as brier,
 	count(*) filter 

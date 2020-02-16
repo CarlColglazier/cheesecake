@@ -3,16 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/carlcolglazier/cheesecake/tba"
-	"github.com/jackc/pgx/pgtype"
 	"log"
 	"regexp"
 	"sync"
+
+	"github.com/carlcolglazier/cheesecake/tba"
+	"github.com/jackc/pgx/pgtype"
 )
 
 // Upserts a list of teams into the database.
 func (config *Config) insertTeams(teamList []tba.Team) {
-	batch := config.Conn.BeginBatch()
+	batch := config.conn.BeginBatch()
 	for _, row := range teamList {
 		batch.Queue(
 			"insert into team (key, team_number, name) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT team_pkey DO UPDATE set team_number = $2, name = $3",
@@ -40,7 +41,7 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 
 // Upserts a list of events into the database.
 func (config *Config) insertEvents(eventList []tba.Event) {
-	batch := config.Conn.BeginBatch()
+	batch := config.conn.BeginBatch()
 	for _, row := range eventList {
 		batch.Queue(
 			"INSERT INTO event (key, end_date, event_type, short_name, year) values ($1, $2, $3, $4, $5) ON CONFLICT ON CONSTRAINT event_pkey DO UPDATE set end_date = $2, event_type = $3, short_name = $4, year = $5",
@@ -68,7 +69,7 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 }
 
 func (config *Config) version() int {
-	row, err := config.Conn.Query("select \"version\" from schema_migrations")
+	row, err := config.conn.Query("select \"version\" from schema_migrations")
 	if err != nil {
 		return 0
 	}
@@ -80,7 +81,7 @@ func (config *Config) version() int {
 }
 
 func (config *Config) insertMatches(matchList []tba.Match) {
-	batch := config.Conn.BeginBatch()
+	batch := config.conn.BeginBatch()
 	reg, err := regexp.Compile("[^0-9]+")
 	if err != nil {
 		log.Println(err)
@@ -208,7 +209,7 @@ func (config *Config) syncEvents() {
 	for i := 2003; i <= 2020; i++ {
 		go func(year int) {
 			defer wg.Done()
-			rows, _ := config.Tba.GetAllOfficialEvents(year)
+			rows, _ := config.tba.GetAllOfficialEvents(year)
 			config.insertEvents(rows)
 		}(i)
 
@@ -218,29 +219,13 @@ func (config *Config) syncEvents() {
 }
 
 // TODO: Change this loop to run within config?
-func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte, error) {
-	/*
-		vals, err := config.CacheGet(modelkey)
-		if err != nil {
-			log.Println(err)
-			log.Println("Could not fetch scores from cache. Calculating...")
-		} else if len(vals) > 2 {
-			b, err := json.Marshal(vals)
-			if err != nil {
-				log.Println("Could not marshal Elo win ratings")
-			} else {
-				return b, nil
-			}
-		} else {
-			log.Println("Empty response. Calculating...")
-		}
-	*/
+func calculateModel(config *Config, pred Model, modelkey string) ([]byte, error) {
 	matches, err := config.getMatches()
 	if err != nil {
 		return nil, err
 	}
-	pred.Dampen()
-	batch := config.Conn.BeginBatch()
+	//pred.Dampen()
+	batch := config.conn.BeginBatch()
 	for _, match := range matches {
 		p := pred.Predict(match)
 		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
@@ -280,7 +265,7 @@ func calculatePredictor(config *Config, pred Predictor, modelkey string) ([]byte
 
 func reset(config *Config) {
 	config.Migrate("db", "cheesecake")
-	teamList, err := config.Tba.GetAllTeams()
+	teamList, err := config.tba.GetAllTeams()
 	if err != nil {
 		log.Printf("Error getting teams: %s", err)
 		return
@@ -289,7 +274,7 @@ func reset(config *Config) {
 	config.syncEvents()
 	// Sync 2019-2020 events.
 	for year := 2019; year <= 2020; year++ {
-		matchChan, _, numEvents := config.Tba.GetAllEventMatches(year)
+		matchChan, _, numEvents := config.tba.GetAllEventMatches(year)
 		for i := 0; i < numEvents; i++ {
 			log.Printf("Upserting event #%d of %d", i, numEvents)
 			matches := <-matchChan
@@ -299,9 +284,13 @@ func reset(config *Config) {
 			config.insertMatches(matches)
 		}
 	}
-	// Sync predictors
+	config.predict()
+}
+
+// Sync predictors
+func (config *Config) predict() {
 	for key, val := range config.predictors {
-		_, err = calculatePredictor(config, val, key)
+		_, err := calculateModel(config, val, key)
 		if err != nil {
 			log.Println(err)
 		}

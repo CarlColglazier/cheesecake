@@ -9,7 +9,7 @@ func loadTestDB() Config {
 	conn, _ := Connect("testdb", "cheesecaketest")
 	tbaInst := tba.NewTba("key")
 	defer tbaInst.Close()
-	config := Config{Conn: conn, Tba: tbaInst}
+	config := Config{conn: conn, tba: tbaInst}
 	return config
 }
 
@@ -21,7 +21,7 @@ func TestInsertTeams(t *testing.T) {
 		{Key: "frc2", TeamNumber: 2, Name: "Two"},
 	}
 	config.insertTeams(teams)
-	rows, err := config.Conn.Query(`SELECT key, team_number FROM team`)
+	rows, err := config.conn.Query(`SELECT key, team_number FROM team`)
 	defer rows.Close()
 	if err != nil {
 		t.Errorf("%s", err)
@@ -57,7 +57,7 @@ func TestInsertTeams(t *testing.T) {
 		{Key: "frc3", TeamNumber: 3, Name: "Three"},
 	}
 	config.insertTeams(teams)
-	rows, err = config.Conn.Query(`SELECT key, team_number, name FROM team`)
+	rows, err = config.conn.Query(`SELECT key, team_number, name FROM team`)
 	defer rows.Close()
 	if err != nil {
 		t.Errorf("%s", err)
@@ -114,7 +114,7 @@ func TestInsertEvents(t *testing.T) {
 		{Key: "2019ef", ShortName: "Everyman Fortune", Year: 2019},
 	}
 	config.insertEvents(events)
-	rows, err := config.Conn.Query(`SELECT key FROM event`)
+	rows, err := config.conn.Query(`SELECT key FROM event`)
 	defer rows.Close()
 	if err != nil {
 		t.Errorf("%s", err)

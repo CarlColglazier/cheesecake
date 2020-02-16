@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/carlcolglazier/cheesecake/tba"
 	"testing"
 	"time"
+
+	"github.com/carlcolglazier/cheesecake/tba"
 )
 
 func TestConnect(t *testing.T) {
@@ -15,7 +16,7 @@ func TestConnect(t *testing.T) {
 	}
 	tbaInst := tba.NewTba("key")
 	defer tbaInst.Close()
-	config := Config{Conn: conn, Tba: tbaInst}
+	config := Config{conn: conn, tba: tbaInst}
 	fmt.Printf("%+v\n", config)
 	config.Migrate("testdb", "cheesecaketest")
 	err = config.CacheSetStr("key", `{"value": 0}`)
