@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"sort"
 	"strconv"
 
@@ -19,6 +20,7 @@ func (me *MatchEntry) Diff() (int, error) {
 
 func (config *Config) getEventMatches2019(event string) ([]MatchEntry, error) {
 	rows, err := config.conn.Query(
+		context.Background(),
 		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phr.prediction as RocketPrediction, phh.prediction as HabPrediction, event.event_type < 7 as official FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
@@ -26,7 +28,7 @@ LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model 
 LEFT JOIN prediction_history phr on phr."match" = alliance.match_key and phr.model = 'rocket'
 LEFT JOIN prediction_history phh on phh."match" = alliance.match_key and phh.model = 'hab'
 join event on (event.key = match.event_key)
-where match.event_key = '` + event + `'`)
+where match.event_key = '`+event+`'`)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +98,7 @@ where match.event_key = '` + event + `'`)
 
 func (config *Config) getEventMatches2020(event string) ([]MatchEntry, error) {
 	rows, err := config.conn.Query(
+		context.Background(),
 		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phe.prediction as Energized, phs.prediction as Shield, event.event_type < 7 as official FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
@@ -103,7 +106,7 @@ LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model 
 LEFT JOIN prediction_history phe on phe."match" = alliance.match_key and phe.model = 'shieldeng'
 LEFT JOIN prediction_history phs on phs."match" = alliance.match_key and phs.model = 'shieldop'
 join event on (event.key = match.event_key)
-where match.event_key = '` + event + `'`)
+where match.event_key = '`+event+`'`)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +175,9 @@ where match.event_key = '` + event + `'`)
 }
 
 func (config *Config) getMatches() ([]MatchEntry, error) {
-	rows, err := config.conn.Query(`SELECT
+	rows, err := config.conn.Query(
+		context.Background(),
+		`SELECT
   match.key, match.comp_level, match.set_number, match.match_number, match.winning_alliance, match.event_key, match.time, match.actual_time, match.predicted_time, match.post_result_time, match.score_breakdown,
   alliance.key, alliance.score, alliance.color, alliance.match_key,
   alliance_teams.alliance_id, alliance_teams.team_key,
@@ -243,7 +248,9 @@ join event on (event.key = match.event_key)
 }
 
 func (config *Config) getEvents(year int) ([]Event, error) {
-	rows, err := config.conn.Query("SELECT key, short_name FROM event where event.year=" + strconv.Itoa(year))
+	rows, err := config.conn.Query(
+		context.Background(),
+		"SELECT key, short_name FROM event where event.year="+strconv.Itoa(year))
 	defer rows.Close()
 	if err != nil {
 		return nil, err

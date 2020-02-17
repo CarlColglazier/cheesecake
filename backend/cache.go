@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 )
 
@@ -26,7 +27,9 @@ func (config *Config) CacheSet(key string, val map[string]interface{}) error {
 }
 
 func (config *Config) CacheGetStr(key string) (string, error) {
-	rows, err := config.conn.Query("SELECT value FROM json_cache WHERE \"key\"='" + key + "'")
+	rows, err := config.conn.Query(
+		context.Background(),
+		"SELECT value FROM json_cache WHERE \"key\"='"+key+"'")
 	defer rows.Close()
 	if err != nil {
 		return "{}", err
@@ -41,6 +44,7 @@ func (config *Config) CacheGetStr(key string) (string, error) {
 
 func (config *Config) CacheSetStr(key, value string) error {
 	_, err := config.conn.Exec(
+		context.Background(),
 		"INSERT INTO json_cache (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE set value = $2", key, value,
 	)
 	if err != nil {

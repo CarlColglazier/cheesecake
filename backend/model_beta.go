@@ -33,6 +33,7 @@ func (pred *BetaModel) SupportsYear(year int) bool {
 	return year == pred.year
 }
 
+// TODO
 func (pred *BetaModel) CurrentValues() map[string]float64 {
 	dic := make(map[string]float64)
 	return dic

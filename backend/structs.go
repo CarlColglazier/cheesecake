@@ -1,5 +1,7 @@
 package main
 
+import "strconv"
+
 // Match represents a single match in both the database and the API.
 type Match struct {
 	Key             string                 `db:"key" json:"key"`
@@ -44,12 +46,28 @@ type MatchEntry struct {
 	Official    bool
 }
 
+func (me MatchEntry) year() int {
+	yearStr := me.Match.Key[0:4]
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		return 0
+	}
+	return year
+}
+
 //
 type PredictionHistory struct {
 	//Key        int     `db:"key"`
 	//Match      string          `db:"match" json:"match"`
 	Prediction map[string]interface{} `db:"prediction" json:"prediction"`
 	//Model      string          `db:"model" json:"model"`
+}
+
+type ForecastHistory struct {
+	Model    string                 `db:"model" json:"model"`
+	MatchKey string                 `db:"match_key" json:"match_key"`
+	TeamKey  string                 `db:"team_key" json:"team_key"`
+	Forecast map[string]interface{} `db:"forecast" json:"forecast"`
 }
 
 //

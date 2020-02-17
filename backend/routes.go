@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,7 +18,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
-	router.HandleFunc("/elo", config.CalcEloScores)
+	//router.HandleFunc("/elo", config.CalcEloScores)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
@@ -70,6 +71,7 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(events)
 }
 
+/*
 func (config *Config) CalcEloScores(w http.ResponseWriter, r *http.Request) {
 	pred := NewEloScoreModel(2019)
 	j, err := calculateModel(config, pred, "eloscores")
@@ -79,9 +81,11 @@ func (config *Config) CalcEloScores(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(j)
 }
+*/
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.conn.Query(
+		context.Background(),
 		`select 
   avg(power((winning_alliance='red')::int - (prediction->'red')::text::float, 2)) as brier,
 	count(*) filter 

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/carlcolglazier/cheesecake/tba"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -15,14 +15,14 @@ const POOLS = 2
 
 // Main struct to contain application connections.
 type Config struct {
-	conn       *pgx.ConnPool
-	tba        *tba.TheBlueAlliance
-	predictors map[string]Model
+	conn   *pgxpool.Pool
+	tba    *tba.TheBlueAlliance
+	models map[string]Model
 }
 
-func NewConfig(conn *pgx.ConnPool, tba *tba.TheBlueAlliance) *Config {
+func NewConfig(conn *pgxpool.Pool, tba *tba.TheBlueAlliance) *Config {
 	predictors := make(map[string]Model)
-	config := Config{conn: conn, tba: tba, predictors: predictors}
+	config := Config{conn: conn, tba: tba, models: predictors}
 	return &config
 }
 
@@ -66,12 +66,12 @@ func main() {
 		}
 	*/
 	//eloPred := NewEloScoreModelFromCache(scores)
-	config.predictors["eloscore2019"] = NewEloScoreModel(2019)
-	config.predictors["eloscore2020"] = NewEloScoreModel(2020)
-	config.predictors["rocket"] = NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
-	config.predictors["hab"] = NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
-	config.predictors["shieldop"] = NewBetaModel(0.5, 12.0, "shieldOperationalRankingPoint", 2020)
-	config.predictors["shieldeng"] = NewBetaModel(0.5, 12.0, "shieldEnergizedRankingPoint", 2020)
+	config.models["eloscore2019"] = NewEloScoreModel(2019)
+	config.models["eloscore2020"] = NewEloScoreModel(2020)
+	config.models["rocket"] = NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
+	config.models["hab"] = NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
+	config.models["shieldop"] = NewBetaModel(0.5, 12.0, "shieldOperationalRankingPoint", 2020)
+	config.models["shieldeng"] = NewBetaModel(0.5, 12.0, "shieldEnergizedRankingPoint", 2020)
 	// ---
 	// Check: do we need to reset?
 	dbVersion := config.version()
@@ -86,6 +86,10 @@ func main() {
 			runServer(config)
 		} else if args[0] == "reset" {
 			reset(config)
+		} else if args[0] == "predict" {
+			config.predict()
+		} else if args[0] == "forecast" {
+			config.forecast()
 		}
 	}
 }

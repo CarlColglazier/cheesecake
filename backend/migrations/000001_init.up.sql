@@ -78,6 +78,15 @@ CREATE TABLE prediction_history (
  	CONSTRAINT prediction_history_match_fkey FOREIGN KEY (match) REFERENCES match(key)
 );
 
+CREATE TABLE forecast_history (
+  model varchar(100) NULL,
+	match_key varchar(25) NOT NULL,
+	team_key varchar(8) NOT NULL,
+  forecast json NULL,
+	CONSTRAINT forecast_pkey PRIMARY KEY (model, match_key, team_key),
+	CONSTRAINT forecast_match_fkey FOREIGN KEY (match_key) REFERENCES match(key)
+);
+
 CREATE TABLE alliance_teams (
 	alliance_id varchar(25) NOT NULL,
 	team_key varchar(8) NOT NULL,
