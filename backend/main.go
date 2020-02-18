@@ -10,9 +10,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Number of database connections.
-const POOLS = 2
-
 // Main struct to contain application connections.
 type Config struct {
 	conn   *pgxpool.Pool
@@ -57,15 +54,6 @@ func main() {
 	config := NewConfig(conn, tbaInst)
 	log.Println("Config created")
 	log.Println("Adding predictors")
-	// EloScore predictor
-	/*
-		scores, err := config.CacheGet("pred_eloscores")
-		if err != nil {
-			log.Println("Could not get elo scores from cache.")
-			scores = make(map[string]interface{})
-		}
-	*/
-	//eloPred := NewEloScoreModelFromCache(scores)
 	config.models["eloscore2019"] = NewEloScoreModel(2019)
 	config.models["eloscore2020"] = NewEloScoreModel(2020)
 	config.models["rocket"] = NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
@@ -78,7 +66,6 @@ func main() {
 	if dbVersion == 0 {
 		reset(config)
 	}
-	//config.predict()
 	// Parse command line input
 	args := os.Args[1:]
 	if len(args) == 1 {
@@ -89,7 +76,7 @@ func main() {
 		} else if args[0] == "predict" {
 			config.predict()
 		} else if args[0] == "forecast" {
-			config.forecast()
+			//config.forecast()
 		}
 	}
 }

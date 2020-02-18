@@ -269,3 +269,33 @@ func (config *Config) getEvents(year int) ([]Event, error) {
 	}
 	return events, nil
 }
+
+type ForecastEntry struct {
+	Match    int     `json:"match"`
+	Team     string  `json:"team"`
+	Forecast float64 `json:"forecast"`
+}
+
+func (config *Config) getEventForecasts(event string) ([]ForecastEntry, error) {
+	rows, err := config.conn.Query(
+		context.Background(),
+		`select match.match_number, team_key, forecast from forecast_history fh
+join match on (match.key = fh.match_key )
+where fh.model = 'rpleader' and 
+fh.match_key like '`+event+`%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	forecasts := make([]ForecastEntry, 0)
+	for rows.Next() {
+		var cast ForecastEntry
+		rows.Scan(
+			&cast.Match,
+			&cast.Team,
+			&cast.Forecast,
+		)
+		forecasts = append(forecasts, cast)
+	}
+	return forecasts, nil
+}

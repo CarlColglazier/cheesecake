@@ -33,5 +33,5 @@ test:
 	docker-compose -f docker-compose.test.yml down
 
 dbclean:
-	docker-compose down && \
-	docker volume rm cheesecake_pg_data
+	docker-compose down -v
+

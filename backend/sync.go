@@ -207,7 +207,31 @@ func (config *Config) predict() {
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
+	simp_model := NewEloScoreModel(2019)
 	for _, match := range matches {
+		// Run the forecast here
+		if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
+			forecastMatches := make([]MatchEntry, 0)
+			//matchesCopy := make([]MatchEntry, len(matches))
+			//copy(matchesCopy, matches)
+			for _, fmatch := range matches {
+				// Only look at matches in the same event
+				if fmatch.Match.EventKey != match.Match.EventKey {
+					continue
+				}
+				p := simp_model.Predict(fmatch)
+				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+				forecastMatches = append(forecastMatches, fmatch)
+			}
+			leadersCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			for team, times := range leadersCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"rpleader", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+		}
+		simp_model.AddResult(match)
 		for modelkey, model := range config.models {
 			if !model.SupportsYear(match.year()) {
 				continue
@@ -227,12 +251,13 @@ func (config *Config) predict() {
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()
 		if err != nil {
-			break
+			log.Println(err)
+			//break
 		}
 	}
 	err := res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
-	config.forecast()
+	//config.forecast()
 }

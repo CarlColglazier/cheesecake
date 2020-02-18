@@ -18,6 +18,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
+	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
 	//router.HandleFunc("/elo", config.CalcEloScores)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
@@ -47,6 +48,16 @@ func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request)
 		log.Println(err)
 	}
 	json.NewEncoder(w).Encode(matches)
+}
+
+func (config *Config) getEventForecastsReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	fore, err := config.getEventForecasts(vars["event"])
+	if err != nil {
+		log.Println(err)
+	}
+	json.NewEncoder(w).Encode(fore)
 }
 
 func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {

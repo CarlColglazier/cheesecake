@@ -74,6 +74,7 @@ CREATE TABLE prediction_history (
  	"match" varchar(25) NULL,
 	model varchar(100) NULL,
  	prediction json NULL,
+	--	ptime integer NULL,
 	CONSTRAINT prediction_history_pkey PRIMARY KEY("match", model),
  	CONSTRAINT prediction_history_match_fkey FOREIGN KEY (match) REFERENCES match(key)
 );
@@ -82,7 +83,7 @@ CREATE TABLE forecast_history (
   model varchar(100) NULL,
 	match_key varchar(25) NOT NULL,
 	team_key varchar(8) NOT NULL,
-  forecast json NULL,
+  forecast float NULL,
 	CONSTRAINT forecast_pkey PRIMARY KEY (model, match_key, team_key),
 	CONSTRAINT forecast_match_fkey FOREIGN KEY (match_key) REFERENCES match(key)
 );
