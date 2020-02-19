@@ -4,22 +4,32 @@
 			<b-thead>
 				<b-tr>
 					<b-th>Team</b-th>
-					<b-th>Firest Seed?</b-th>
-					<b-th>Captain? (TODO)</b-th>
+					<b-th>First Seed?</b-th>
+					<b-th>Captain?</b-th>
 				</b-tr>
 			</b-thead>
 			<b-tbody>
-				<b-tr v-for="team in allTeams(forecasts)" :key="team">
+				<b-tr v-for="team in allTeams(forecasts.cap)" :key="team">
 					<b-td>{{ team }}</b-td>
 					<b-td>
 						<svg width="150" height="50">
-							<line v-for="cast in teamForecasts(forecasts, team)"
+							<line v-for="cast in teamForecasts(forecasts.rpleader, team)"
+										:x1="cast.match" :x2="cast.match"
+										y2="50" :y1="50 - cast.forecast * 50"
+										stroke="black" stroke-width="5"
+							/>
+						</svg>
+						<span>{{ latestForecast(forecasts.rpleader, team) }}</span>
+					</b-td>
+					<b-td>
+						<svg width="150" height="50">
+							<line v-for="cast in teamForecasts(forecasts.cap, team)"
 													 :x1="cast.match" :x2="cast.match"
 													 y2="50" :y1="50 - cast.forecast * 50"
 													 stroke="black" stroke-width="5"
 							/>
 						</svg>
-						<span>{{ latestForecast(forecasts, team) }}</span>
+						<span>{{ latestForecast(forecasts.cap, team) }}</span>
 					</b-td>
 				</b-tr>
 			</b-tbody>

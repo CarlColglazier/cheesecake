@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"sort"
 )
 
 type future struct {
@@ -23,6 +24,18 @@ func (f future) addPoints(team string, points int) {
 	f.rp[team] += points
 }
 
+// From https://github.com/indraniel/go-learn/blob/master/09-sort-map-keys-by-values.go
+type pair struct {
+	key   string
+	value int
+}
+
+type pairList []pair
+
+func (p pairList) Len() int           { return len(p) }
+func (p pairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p pairList) Less(i, j int) bool { return p[i].value < p[j].value }
+
 func (f future) leader() string {
 	val := ""
 	m := 0
@@ -35,6 +48,21 @@ func (f future) leader() string {
 	return val
 }
 
+func (f future) rankOrder() []string {
+	p := make(pairList, len(f.rp))
+	i := 0
+	for k, v := range f.rp {
+		p[i] = pair{k, v}
+		i++
+	}
+	sort.Sort(sort.Reverse(p))
+	var keys []string
+	for _, k := range p {
+		keys = append(keys, k.key)
+	}
+	return keys
+}
+
 // Calculate one possible future for an event.
 func findFuture(time int, matches []MatchEntry) future {
 	f := NewFuture()
@@ -42,13 +70,6 @@ func findFuture(time int, matches []MatchEntry) future {
 		if match.Match.CompLevel != "qm" {
 			continue
 		}
-		/*
-			if match.Alliances["red"].Alliance.Score != -1 {
-				if match.Alliances["red"].Alliance.Score > match.Alliances["blue"].Alliance.Score {
-
-				}
-			}
-		*/
 		if match.Match.Time < time {
 			if len(match.Match.WinningAlliance) > 0 {
 				winner := match.Match.WinningAlliance
@@ -79,27 +100,26 @@ func findFuture(time int, matches []MatchEntry) future {
 		for _, team := range match.Alliances[randWin].Teams {
 			f.addPoints(team, 2)
 		}
-		//fmt.Printf("%f %f\n", r, pred)
 	}
-	/*
-		if matches[0].Match.EventKey == "2019ncwak" {
-			fmt.Printf("%v\n", f)
-		}
-	*/
 	return f
 }
 
-func (config *Config) forecastEvent(time int, matches []MatchEntry) map[string]int {
+func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]int, map[string]int) {
 	futures := make([]future, 100)
 	for i, _ := range futures {
 		futures[i] = findFuture(time, matches)
 	}
 	leaders := make(map[string]int)
+	captains := make(map[string]int)
 	for _, val := range futures {
 		leader := val.leader()
+		caps := val.rankOrder()[0:8]
 		leaders[leader] += 1
+		for _, c := range caps {
+			captains[c] += 1
+		}
 	}
-	return leaders
+	return leaders, captains
 }
 
 /*

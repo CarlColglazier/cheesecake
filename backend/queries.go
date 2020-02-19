@@ -271,6 +271,7 @@ func (config *Config) getEvents(year int) ([]Event, error) {
 }
 
 type ForecastEntry struct {
+	Model    string  `json:"model"`
 	Match    int     `json:"match"`
 	Team     string  `json:"team"`
 	Forecast float64 `json:"forecast"`
@@ -279,10 +280,10 @@ type ForecastEntry struct {
 func (config *Config) getEventForecasts(event string) ([]ForecastEntry, error) {
 	rows, err := config.conn.Query(
 		context.Background(),
-		`select match.match_number, team_key, forecast from forecast_history fh
+		`select model, match.match_number, team_key, forecast from forecast_history fh
 join match on (match.key = fh.match_key )
-where fh.model = 'rpleader' and 
-fh.match_key like '`+event+`%'`)
+where
+fh.match_key like '`+event+`_%'`)
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +292,7 @@ fh.match_key like '`+event+`%'`)
 	for rows.Next() {
 		var cast ForecastEntry
 		rows.Scan(
+			&cast.Model,
 			&cast.Match,
 			&cast.Team,
 			&cast.Forecast,

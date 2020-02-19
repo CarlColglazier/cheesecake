@@ -223,10 +223,16 @@ func (config *Config) predict() {
 				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
 				forecastMatches = append(forecastMatches, fmatch)
 			}
-			leadersCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
 			for team, times := range leadersCast {
 				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
 					"rpleader", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+			for team, times := range capsCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"cap", match.Match.Key, team, float64(times)/100.0,
 				)
 				qCount += 1
 			}

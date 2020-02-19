@@ -29,24 +29,25 @@ function yearMatch(year) {
 	return this.$nuxt.$route.params.key.substring(0, 4) == year;
 }
 
-function topTeams(forecast) {
-	var max_match = Math.max.apply(Math, forecast.map(function(f) { return f.match }));
-	var max_fore = forecast.filter(function(f) { return f.match === max_match });
-	return max_fore.map(function(f) { return f.team });
-}
-
 export default {
 	layout: 'default',
 	async asyncData(context) {
 		try {
 			const dataf = await context.app.fetch(`/matches/${context.params.key}`)
 			const data = await dataf.json()
+			let forecasts = {};
 			const foref = await context.app.fetch(`/forecasts/${context.params.key}`)
 			const fore = await foref.json()
-			return { matches: data, forecasts: fore }
+			forecasts["rpleader"] = fore.filter(g => {
+				return g.model === "rpleader";
+			});
+			forecasts["cap"] = fore.filter(g => {
+				return g.model === "cap";
+			});
+			return { matches: data, forecasts: forecasts }
 		} catch (e) {
 			console.error(e)
-			return { matches: [], forecasts: [] }
+			return { matches: [], forecasts: {"rpleader": [], "cap": []} }
 		}
 	},
 	mounted() {
