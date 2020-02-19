@@ -15,7 +15,7 @@
 						<svg width="150" height="50">
 							<line v-for="cast in teamForecasts(forecasts, team)"
 													 :x1="cast.match" :x2="cast.match"
-													 y2="50", :y1="50 - cast.forecast * 50"
+													 y2="50" :y1="50 - cast.forecast * 50"
 													 stroke="black" stroke-width="5"
 							/>
 						</svg>
