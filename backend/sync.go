@@ -208,7 +208,12 @@ func (config *Config) predict() {
 	matches, _ := config.getMatches()
 	qCount := 0
 	simp_model := NewEloScoreModel(2019)
+	simp_model2 := NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
+	simp_model3 := NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
 	for _, match := range matches {
+		if match.Match.Key[0:4] != "2019" {
+			continue
+		}
 		// Run the forecast here
 		if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
 			forecastMatches := make([]MatchEntry, 0)
@@ -220,7 +225,11 @@ func (config *Config) predict() {
 					continue
 				}
 				p := simp_model.Predict(fmatch)
+				p2 := simp_model2.Predict(fmatch)
+				p3 := simp_model3.Predict(fmatch)
 				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+				fmatch.Predictions["rocket"] = &PredictionHistory{Prediction: p2}
+				fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
 				forecastMatches = append(forecastMatches, fmatch)
 			}
 			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
@@ -238,6 +247,8 @@ func (config *Config) predict() {
 			}
 		}
 		simp_model.AddResult(match)
+		simp_model2.AddResult(match)
+		simp_model2.AddResult(match)
 		for modelkey, model := range config.models {
 			if !model.SupportsYear(match.year()) {
 				continue

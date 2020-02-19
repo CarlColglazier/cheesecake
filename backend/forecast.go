@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"math/rand"
 	"sort"
 )
@@ -76,29 +77,83 @@ func findFuture(time int, matches []MatchEntry) future {
 				for _, team := range match.Alliances[winner].Teams {
 					f.addPoints(team, 2)
 				}
-				continue
 				// TODO: handle ties
 			}
-		}
-		var randWin string
-		var pred float64
-		p := match.Predictions["elo_score"]
-		if p == nil {
-			continue
-		}
-		if val, ok := p.Prediction["red"]; ok {
-			pred = val.(float64)
+			// RP things by year.
+			if match.Match.Key[0:4] == "2019" {
+				breakdown := match.Match.ScoreBreakdown
+				for key, val := range match.Alliances {
+					bd, ok := breakdown[key].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					success, ok := bd["completeRocketRankingPoint"].(bool)
+					if !ok {
+						continue
+					}
+					if success {
+						for i := range val.Teams {
+							teamKey := val.Teams[i]
+							f.addPoints(teamKey, 1)
+						}
+					}
+					success, ok = bd["habDockingRankingPoint"].(bool)
+					if !ok {
+						continue
+					}
+					if success {
+						for i := range val.Teams {
+							teamKey := val.Teams[i]
+							f.addPoints(teamKey, 1)
+						}
+					}
+				}
+			}
 		} else {
-			pred = 0.5
-		}
-		r := rand.Float64()
-		if r <= pred {
-			randWin = "red"
-		} else {
-			randWin = "blue"
-		}
-		for _, team := range match.Alliances[randWin].Teams {
-			f.addPoints(team, 2)
+			var randWin string
+			var pred float64
+			p := match.Predictions["elo_score"]
+			if p == nil {
+				continue
+			}
+			if val, ok := p.Prediction["red"]; ok {
+				pred = val.(float64)
+			} else {
+				pred = 0.5
+			}
+			r := rand.Float64()
+			if r <= pred {
+				randWin = "red"
+			} else {
+				randWin = "blue"
+			}
+			for _, team := range match.Alliances[randWin].Teams {
+				f.addPoints(team, 2)
+			}
+			if match.Match.Key[0:4] == "2019" {
+				rocket := match.Predictions["rocket"]
+				hab := match.Predictions["hab"]
+				if rocket == nil || hab == nil {
+					log.Println("Issue getting predictors.")
+					continue
+				}
+				for key, val := range rocket.Prediction {
+					k := val.(float64)
+					if rand.Float64() < k {
+						for _, team := range match.Alliances[key].Teams {
+							f.addPoints(team, 1)
+						}
+					}
+				}
+				for key, val := range hab.Prediction {
+					k := val.(float64)
+					if rand.Float64() < k {
+						for _, team := range match.Alliances[key].Teams {
+							f.addPoints(team, 1)
+						}
+					}
+				}
+			}
 		}
 	}
 	return f

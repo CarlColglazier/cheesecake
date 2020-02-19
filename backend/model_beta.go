@@ -79,10 +79,12 @@ func (pred *BetaModel) AddResult(me MatchEntry) {
 		bd, ok := breakdown[key].(map[string]interface{})
 		if !ok {
 			log.Println("Issue with breakdown.")
+			continue
 		}
 		success, ok := bd[pred.breakdownKey].(bool)
 		if !ok {
 			log.Println("Issue casting success to bool.")
+			continue
 		}
 		for i := range val.Teams {
 			teamKey := val.Teams[i]
