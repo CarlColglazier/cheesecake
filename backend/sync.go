@@ -210,45 +210,52 @@ func (config *Config) predict() {
 	simp_model := NewEloScoreModel(2019)
 	simp_model2 := NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
 	simp_model3 := NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
+	eloModel2020 := NewEloScoreModel(2020)
 	for _, match := range matches {
-		if match.Match.Key[0:4] != "2019" {
-			continue
+		if match.Match.Key[0:4] == "2020" {
+			// Run the forecast
+			if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
+
+			}
+			eloModel2020.AddResult(match)
 		}
-		// Run the forecast here
-		if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
-			forecastMatches := make([]MatchEntry, 0)
-			//matchesCopy := make([]MatchEntry, len(matches))
-			//copy(matchesCopy, matches)
-			for _, fmatch := range matches {
-				// Only look at matches in the same event
-				if fmatch.Match.EventKey != match.Match.EventKey {
-					continue
+		if match.Match.Key[0:4] == "2019" {
+			// Run the forecast here
+			if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
+				forecastMatches := make([]MatchEntry, 0)
+				//matchesCopy := make([]MatchEntry, len(matches))
+				//copy(matchesCopy, matches)
+				for _, fmatch := range matches {
+					// Only look at matches in the same event
+					if fmatch.Match.EventKey != match.Match.EventKey {
+						continue
+					}
+					p := simp_model.Predict(fmatch)
+					p2 := simp_model2.Predict(fmatch)
+					p3 := simp_model3.Predict(fmatch)
+					fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+					fmatch.Predictions["rocket"] = &PredictionHistory{Prediction: p2}
+					fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
+					forecastMatches = append(forecastMatches, fmatch)
 				}
-				p := simp_model.Predict(fmatch)
-				p2 := simp_model2.Predict(fmatch)
-				p3 := simp_model3.Predict(fmatch)
-				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
-				fmatch.Predictions["rocket"] = &PredictionHistory{Prediction: p2}
-				fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
-				forecastMatches = append(forecastMatches, fmatch)
+				leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
+				for team, times := range leadersCast {
+					batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+						"rpleader", match.Match.Key, team, float64(times)/100.0,
+					)
+					qCount += 1
+				}
+				for team, times := range capsCast {
+					batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+						"cap", match.Match.Key, team, float64(times)/100.0,
+					)
+					qCount += 1
+				}
 			}
-			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
-			for team, times := range leadersCast {
-				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
-					"rpleader", match.Match.Key, team, float64(times)/100.0,
-				)
-				qCount += 1
-			}
-			for team, times := range capsCast {
-				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
-					"cap", match.Match.Key, team, float64(times)/100.0,
-				)
-				qCount += 1
-			}
+			simp_model.AddResult(match)
+			simp_model2.AddResult(match)
+			simp_model2.AddResult(match)
 		}
-		simp_model.AddResult(match)
-		simp_model2.AddResult(match)
-		simp_model2.AddResult(match)
 		for modelkey, model := range config.models {
 			if !model.SupportsYear(match.year()) {
 				continue
