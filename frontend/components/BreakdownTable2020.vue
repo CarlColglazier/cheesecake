@@ -39,9 +39,9 @@
 				</b-td>
 				<b-td>{{ d.alliances.red.alliance.score }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.red) }})</b-td>
-				<b-td>{{ rankPoints(d.match.score_breakdown.red.shieldEnergizedRankingPoint) }}</b-td>
+				<b-td>{{ rankPoints(rP(d, 'red', 'shieldEnergizedRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.energized.prediction.red) }})</b-td>
-				<b-td>{{ rankPoints(d.match.score_breakdown.red.shieldOperationalRankingPoint) }}</b-td>
+				<b-td>{{ rankPoints(rP(d, 'red', 'shieldOperationalRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.shield.prediction.red) }})</b-td>
 			</b-tr>
 			<b-tr>
@@ -56,9 +56,9 @@
 				</b-td>
 				<b-td>{{ d.alliances.blue.alliance.score }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.blue) }})</b-td>
-				<b-td>{{ rankPoints(d.match.score_breakdown.blue.shieldEnergizedRankingPoint) }}</b-td>
+				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldEnergizedRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.energized.prediction.blue) }})</b-td>
-				<b-td>{{ rankPoints(d.match.score_breakdown.blue.shieldOperationalRankingPoint) }}</b-td>
+				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldOperationalRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.shield.prediction.blue) }})</b-td>
 			</b-tr>
 		</b-tbody>
@@ -66,6 +66,16 @@
 </template>
 
 <script>
+function rP(d, color, prop) {
+	if (!('score_breakdown' in d.match)) {
+		return '';	
+	}
+	if (d.match.score_breakdown === null) {
+		return '';
+	}
+	return d.match.score_breakdown[color][prop];
+}
+
 function rankPoints(input) {
 	if (input) {
 		return '\u2713'
@@ -85,7 +95,8 @@ export default {
 	methods: {
 		rankPoints: rankPoints,
 		displayPrediction: prediction,
-		roundPred: roundPred
+		roundPred: roundPred,
+		rP: rP
 	},
 	props: ['matches']
 }
