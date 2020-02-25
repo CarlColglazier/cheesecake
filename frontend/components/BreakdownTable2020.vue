@@ -15,9 +15,6 @@
 				<b-th colspan="2">
 					Shield
 				</b-th>
-				<b-th>
-					Rank Points
-				</b-th>
 			</b-tr>
 		</b-thead>
 		<b-tbody v-for="d in matches" :key="d.match.key">

@@ -71,7 +71,7 @@ func findFuture(time int, matches []MatchEntry) future {
 		if match.Match.CompLevel != "qm" {
 			continue
 		}
-		if match.Match.Time < time {
+		if match.Match.Time <= time {
 			if len(match.Match.WinningAlliance) > 0 {
 				winner := match.Match.WinningAlliance
 				for _, team := range match.Alliances[winner].Teams {
@@ -80,6 +80,35 @@ func findFuture(time int, matches []MatchEntry) future {
 				// TODO: handle ties
 			}
 			// RP things by year.
+			if match.Match.Key[0:4] == "2020" {
+				breakdown := match.Match.ScoreBreakdown
+				for key, val := range match.Alliances {
+					bd, ok := breakdown[key].(map[string]interface{})
+					if !ok {
+						continue
+					}
+					success, ok := bd["shieldOperationalRankingPoint"].(bool)
+					if !ok {
+						continue
+					}
+					if success {
+						for i := range val.Teams {
+							teamKey := val.Teams[i]
+							f.addPoints(teamKey, 1)
+						}
+					}
+					success, ok = bd["shieldEnergizedRankingPoint"].(bool)
+					if !ok {
+						continue
+					}
+					if success {
+						for i := range val.Teams {
+							teamKey := val.Teams[i]
+							f.addPoints(teamKey, 1)
+						}
+					}
+				}
+			}
 			if match.Match.Key[0:4] == "2019" {
 				breakdown := match.Match.ScoreBreakdown
 				for key, val := range match.Alliances {
@@ -176,18 +205,3 @@ func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]
 	}
 	return leaders, captains
 }
-
-/*
-func (config *Config) forecast() {
-	events, err := config.getEvents(2019)
-	if err != nil {
-		log.Println("Could not get events.")
-		return
-	}
-	for _, event := range events {
-		matches, _ := config.getEventMatches2019(event.Key)
-		fmt.Println(event.Key)
-		config.forecastEvent(matches)
-	}
-}
-*/

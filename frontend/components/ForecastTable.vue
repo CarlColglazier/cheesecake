@@ -1,5 +1,6 @@
 <template>
 	<div>
+		<p>Forecast current as of Match {{ maxMatch(forecasts.rpleader) }}</p>
 		<b-table-simple>
 			<b-thead>
 				<b-tr>
@@ -16,7 +17,7 @@
 							<line v-for="cast in teamForecasts(forecasts.rpleader, team)"
 										:x1="cast.match" :x2="cast.match"
 										y2="50" :y1="50 - cast.forecast * 50"
-										stroke="black" stroke-width="5"
+										stroke="black" stroke-width="1"
 							/>
 						</svg>
 						<span>{{ latestForecast(forecasts.rpleader, team) }}</span>
@@ -26,7 +27,7 @@
 							<line v-for="cast in teamForecasts(forecasts.cap, team)"
 													 :x1="cast.match" :x2="cast.match"
 													 y2="50" :y1="50 - cast.forecast * 50"
-													 stroke="black" stroke-width="5"
+													 stroke="black" stroke-width="1"
 							/>
 						</svg>
 						<span>{{ latestForecast(forecasts.cap, team) }}</span>
@@ -47,7 +48,7 @@ function allTeams(forecasts) {
 }
 
 function latestForecast(forecasts, team) {
-	var max_match = Math.max.apply(Math, forecasts.map(function(f) { return f.match }));
+	var max_match = maxMatch(forecasts);
 	var max_fore = forecasts.filter(f => {
 		return f.match === max_match && f.team === team;
 	});
@@ -63,8 +64,12 @@ function teamForecasts(forecasts, team) {
 	});
 }
 
+function maxMatch(forecast) {
+	return Math.max.apply(Math, forecast.map(function(f) { return f.match }));
+}
+
 function topTeams(forecast) {
-	var max_match = Math.max.apply(Math, forecast.map(function(f) { return f.match }));
+	var max_match = maxMatch(forecast);
 	var max_fore = forecast.filter(f => {
 		return f.match === max_match;
 	});
@@ -76,7 +81,8 @@ export default {
 	methods: {
 		allTeams: allTeams,
 		latestForecast: latestForecast,
-		teamForecasts: teamForecasts
+		teamForecasts: teamForecasts,
+		maxMatch: maxMatch
 	},
 	props: ['forecasts']
 }

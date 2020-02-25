@@ -76,7 +76,10 @@ func main() {
 		} else if args[0] == "predict" {
 			config.predict()
 		} else if args[0] == "forecast" {
-			//config.forecast()
+			config.forecast()
+		} else if args[0] == "forecastfull" {
+			config.forecast2019()
+			config.forecast2020()
 		}
 	}
 }

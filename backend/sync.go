@@ -207,55 +207,7 @@ func (config *Config) predict() {
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
-	simp_model := NewEloScoreModel(2019)
-	simp_model2 := NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
-	simp_model3 := NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
-	eloModel2020 := NewEloScoreModel(2020)
 	for _, match := range matches {
-		if match.Match.Key[0:4] == "2020" {
-			// Run the forecast
-			if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
-
-			}
-			eloModel2020.AddResult(match)
-		}
-		if match.Match.Key[0:4] == "2019" {
-			// Run the forecast here
-			if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
-				forecastMatches := make([]MatchEntry, 0)
-				//matchesCopy := make([]MatchEntry, len(matches))
-				//copy(matchesCopy, matches)
-				for _, fmatch := range matches {
-					// Only look at matches in the same event
-					if fmatch.Match.EventKey != match.Match.EventKey {
-						continue
-					}
-					p := simp_model.Predict(fmatch)
-					p2 := simp_model2.Predict(fmatch)
-					p3 := simp_model3.Predict(fmatch)
-					fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
-					fmatch.Predictions["rocket"] = &PredictionHistory{Prediction: p2}
-					fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
-					forecastMatches = append(forecastMatches, fmatch)
-				}
-				leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
-				for team, times := range leadersCast {
-					batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
-						"rpleader", match.Match.Key, team, float64(times)/100.0,
-					)
-					qCount += 1
-				}
-				for team, times := range capsCast {
-					batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
-						"cap", match.Match.Key, team, float64(times)/100.0,
-					)
-					qCount += 1
-				}
-			}
-			simp_model.AddResult(match)
-			simp_model2.AddResult(match)
-			simp_model2.AddResult(match)
-		}
 		for modelkey, model := range config.models {
 			if !model.SupportsYear(match.year()) {
 				continue
@@ -283,5 +235,121 @@ func (config *Config) predict() {
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
+}
+
+func (config *Config) forecast2019() {
+	batch := &pgx.Batch{}
+	matches, _ := config.getMatches()
+	qCount := 0
+	simp_model := NewEloScoreModel(2019)
+	simp_model2 := NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
+	simp_model3 := NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
+	for _, match := range matches {
+		if match.Match.Key[0:4] != "2019" {
+			continue
+		}
+		if match.Match.CompLevel == "qm" && (match.Match.MatchNumber)%5 == 1 {
+			forecastMatches := make([]MatchEntry, 0)
+			for _, fmatch := range matches {
+				// Only look at matches in the same event
+				if fmatch.Match.EventKey != match.Match.EventKey {
+					continue
+				}
+				p := simp_model.Predict(fmatch)
+				p2 := simp_model2.Predict(fmatch)
+				p3 := simp_model3.Predict(fmatch)
+				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+				fmatch.Predictions["rocket"] = &PredictionHistory{Prediction: p2}
+				fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
+				forecastMatches = append(forecastMatches, fmatch)
+			}
+			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			for team, times := range leadersCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"rpleader", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+			for team, times := range capsCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"cap", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+		}
+		simp_model.AddResult(match)
+		simp_model2.AddResult(match)
+		simp_model2.AddResult(match)
+	}
+	log.Printf("Sending %d predictions to database...", qCount)
+	res := config.conn.SendBatch(context.Background(), batch)
+	for i := 0; i < qCount; i++ {
+		_, err := res.Exec()
+		if err != nil {
+			log.Println(err)
+			//break
+		}
+	}
+	err := res.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
+}
+
+func (config *Config) forecast2020() {
+	batch := &pgx.Batch{}
+	matches, _ := config.getMatches()
+	qCount := 0
+	eloModel2020 := NewEloScoreModel(2020)
+	for _, match := range matches {
+		if match.Match.Key[0:4] != "2020" {
+			continue
+		}
+		// Run the forecast
+		if match.Match.CompLevel == "qm" { //&& (match.Match.MatchNumber)%5 == 1 {
+			forecastMatches := make([]MatchEntry, 0)
+			for _, fmatch := range matches {
+				// Only look at matches in the same event
+				if fmatch.Match.EventKey != match.Match.EventKey {
+					continue
+				}
+				p := eloModel2020.Predict(fmatch)
+				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+				forecastMatches = append(forecastMatches, fmatch)
+			}
+			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			for team, times := range leadersCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"rpleader", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+			for team, times := range capsCast {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"cap", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+		}
+		eloModel2020.AddResult(match)
+	}
+	log.Printf("Sending %d predictions to database...", qCount)
+	res := config.conn.SendBatch(context.Background(), batch)
+	for i := 0; i < qCount; i++ {
+		_, err := res.Exec()
+		if err != nil {
+			log.Println(err)
+			//break
+		}
+	}
+	err := res.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
 	//config.forecast()
+
+}
+
+func (config *Config) forecast() {
+	config.forecast2020()
 }
