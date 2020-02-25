@@ -1,0 +1,24 @@
+---
+title: "Predicting FRC Climbing Outcomes"
+author: "Carl Colglazier"
+date: "January 27, 2020"
+output: html_document
+---
+
+```{r}
+source("shared.R")
+```
+
+
+```{sql, connection=con}
+select
+	model,
+	avg(POWER((winning_alliance='red')::int - prediction, 2)) as brier,
+	count(*) filter 
+		(where (winning_alliance='red' and prediction > 0.5) or (winning_alliance='blue' and prediction < 0.5)) as correct,
+	count(*) as count
+from match
+inner join prediction_history on prediction_history.match=match.key
+where match.winning_alliance is not null and length(match.winning_alliance) > 0
+group by model
+```
