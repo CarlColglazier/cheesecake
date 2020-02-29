@@ -77,7 +77,7 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 	}
 	for _, row := range matchList {
 		batch.Queue(
-			"insert into match (key, comp_level, set_number, match_number, winning_alliance, event_key, time, actual_time, predicted_time, post_result_time, score_breakdown) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ON CONSTRAINT match_pkey DO NOTHING",
+			"insert into match (key, comp_level, set_number, match_number, winning_alliance, event_key, time, actual_time, predicted_time, post_result_time, score_breakdown) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT ON CONSTRAINT match_pkey DO UPDATE set winning_alliance = $5, actual_time = $8, post_result_time = $10, score_breakdown = $11",
 			row.Key,
 			row.CompLevel,
 			row.SetNumber,
@@ -188,7 +188,7 @@ func reset(config *Config) {
 	config.insertTeams(teamList)
 	config.syncEvents()
 	// Sync 2019-2020 events.
-	for year := 2019; year <= 2020; year++ {
+	for year := 2020; year <= 2020; year++ {
 		matchChan, _, numEvents := config.tba.GetAllEventMatches(year)
 		for i := 0; i < numEvents; i++ {
 			log.Printf("Upserting event #%d of %d", i, numEvents)
@@ -241,7 +241,7 @@ func (config *Config) forecast2019() {
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
-	simp_model := NewEloScoreModel(2019)
+	simp_model := NewEloScoreModel(2019, 21.1)
 	simp_model2 := NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
 	simp_model3 := NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
 	for _, match := range matches {
@@ -296,17 +296,34 @@ func (config *Config) forecast2019() {
 	}
 }
 
+func lastPlayed(event string, matches []MatchEntry) int {
+	last := 0
+	for _, match := range matches {
+		if match.Match.EventKey == event && match.Match.CompLevel == "qm" {
+			if match.Match.ScoreBreakdown != nil && match.Match.MatchNumber > last {
+				last = match.Match.MatchNumber
+			}
+		}
+	}
+	return last
+}
+
 func (config *Config) forecast2020() {
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
-	eloModel2020 := NewEloScoreModel(2020)
+	eloModel2020 := NewEloScoreModel(2020, 40.0)
 	for _, match := range matches {
 		if match.Match.Key[0:4] != "2020" {
 			continue
 		}
+		if match.Match.MatchNumber != 1 {
+			if match.Match.MatchNumber > lastPlayed(match.Match.EventKey, matches) {
+				continue
+			}
+		}
 		// Run the forecast
-		if match.Match.CompLevel == "qm" { //&& (match.Match.MatchNumber)%5 == 1 {
+		if match.Match.CompLevel == "qm" {
 			forecastMatches := make([]MatchEntry, 0)
 			for _, fmatch := range matches {
 				// Only look at matches in the same event
@@ -331,7 +348,9 @@ func (config *Config) forecast2020() {
 				qCount += 1
 			}
 		}
-		eloModel2020.AddResult(match)
+		if match.Official {
+			eloModel2020.AddResult(match)
+		}
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
 	res := config.conn.SendBatch(context.Background(), batch)

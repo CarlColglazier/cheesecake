@@ -34,7 +34,7 @@
 						{{ team.substring(3) }}
 					</span>
 				</b-td>
-				<b-td>{{ d.alliances.red.alliance.score }}</b-td>
+				<b-td>{{ score(d.alliances.red.alliance.score) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.red) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'red', 'shieldEnergizedRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.energized.prediction.red) }})</b-td>
@@ -51,7 +51,7 @@
 						{{ team.substring(3) }}
 					</span>
 				</b-td>
-				<b-td>{{ d.alliances.blue.alliance.score }}</b-td>
+				<b-td>{{ score(d.alliances.blue.alliance.score) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.blue) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldEnergizedRankingPoint')) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.energized.prediction.blue) }})</b-td>
@@ -88,12 +88,20 @@ function roundPred(num) {
 	return `${Math.round(num * 100)}%`
 }
 
+function score(num) {
+	if (num === -1) {
+		return '';
+	}
+	return `${num}`
+}
+
 export default {
 	methods: {
 		rankPoints: rankPoints,
 		displayPrediction: prediction,
 		roundPred: roundPred,
-		rP: rP
+		rP: rP,
+		score: score
 	},
 	props: ['matches']
 }

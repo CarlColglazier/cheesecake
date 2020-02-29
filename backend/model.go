@@ -38,19 +38,22 @@ type Model interface {
 type EloScoreModel struct {
 	current map[string]float64
 	year    int
+	K       float64
+	Std     float64
 }
 
-func NewEloScoreModel(year int) *EloScoreModel {
+func NewEloScoreModel(year int, std float64) *EloScoreModel {
 	scores, err := ReadEloRecords(year)
 	if err != nil {
 		log.Printf("Could not read Elo scores: %v\n", err)
 		return &EloScoreModel{}
 	}
-	pred := &EloScoreModel{scores, year}
+	pred := &EloScoreModel{scores, year, 12.0, std}
 	pred.Dampen()
 	return pred
 }
 
+/*
 func NewEloScoreModelFromCache(scores map[string]interface{}) *EloScoreModel {
 	mapString := make(map[string]float64)
 	for key, value := range scores {
@@ -63,6 +66,7 @@ func NewEloScoreModelFromCache(scores map[string]interface{}) *EloScoreModel {
 	}
 	return &EloScoreModel{mapString, 2019}
 }
+*/
 
 func (pred *EloScoreModel) Dampen() {
 	for k, v := range pred.current {
@@ -102,8 +106,8 @@ func (pred *EloScoreModel) Predict(me MatchEntry) map[string]interface{} {
 }
 
 func (pred *EloScoreModel) AddResult(me MatchEntry) {
-	std := 21.1
-	k := 12.0
+	std := pred.Std
+	k := pred.K
 	oddsMap := pred.Predict(me)
 	odds, _ := oddsMap["red"].(float64)
 	randx := rand.NewSource(372984243789)

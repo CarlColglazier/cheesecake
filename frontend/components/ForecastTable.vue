@@ -10,7 +10,7 @@
 				</b-tr>
 			</b-thead>
 			<b-tbody>
-				<b-tr v-for="team in allTeams(forecasts.cap)" :key="team">
+				<b-tr v-for="team in allTeams(forecasts.cap).sort(function(a, b) { return a < b }).reverse()" :key="team">
 					<b-td>{{ team }}</b-td>
 					<b-td>
 						<svg width="150" height="50">

@@ -197,7 +197,12 @@ func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]
 	captains := make(map[string]int)
 	for _, val := range futures {
 		leader := val.leader()
-		caps := val.rankOrder()[0:8]
+		c := val.rankOrder()
+		mc := 8
+		if len(c) < 8 {
+			mc = len(c)
+		}
+		caps := c[0:mc]
 		leaders[leader] += 1
 		for _, c := range caps {
 			captains[c] += 1
