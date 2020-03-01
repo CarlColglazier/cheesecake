@@ -37,9 +37,9 @@
 				<b-td>{{ score(d.alliances.red.alliance.score) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.red) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'red', 'shieldEnergizedRankingPoint')) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.energized.prediction.red) }})</b-td>
+				<b-td>{{ rpPrediction(d, "red", "energized") }}</b-td>
 				<b-td>{{ rankPoints(rP(d, 'red', 'shieldOperationalRankingPoint')) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.shield.prediction.red) }})</b-td>
+				<b-td>{{ rpPrediction(d, "red", "shield") }}</b-td>
 			</b-tr>
 			<b-tr>
 				<b-td></b-td>
@@ -54,9 +54,9 @@
 				<b-td>{{ score(d.alliances.blue.alliance.score) }}</b-td>
 				<b-td>({{ roundPred(d.predictions.elo_score.prediction.blue) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldEnergizedRankingPoint')) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.energized.prediction.blue) }})</b-td>
+				<b-td>{{ rpPrediction(d, "blue", "energized") }}</b-td>
 				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldOperationalRankingPoint')) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.shield.prediction.blue) }})</b-td>
+				<b-td>{{ rpPrediction(d, "blue", "shield") }}</b-td>
 			</b-tr>
 		</b-tbody>
 	</b-table-simple>
@@ -95,13 +95,21 @@ function score(num) {
 	return `${num}`
 }
 
+function rpPrediction(match, color, key) {
+	if (match.match.comp_level != "qm") {
+		return '';
+	}
+	return prediction(match.predictions[key].prediction[color]);
+}
+
 export default {
 	methods: {
 		rankPoints: rankPoints,
 		displayPrediction: prediction,
 		roundPred: roundPred,
 		rP: rP,
-		score: score
+		score: score,
+		rpPrediction: rpPrediction
 	},
 	props: ['matches']
 }
