@@ -13,20 +13,20 @@
 				<b-tr v-for="team in allTeams(forecasts.cap).sort(function(a, b) { return a < b }).reverse()" :key="team">
 					<b-td>{{ team }}</b-td>
 					<b-td>
-						<svg width="150" height="50">
+						<svg width="150" height="30">
 							<line v-for="cast in teamForecasts(forecasts.rpleader, team)"
 										:x1="cast.match" :x2="cast.match"
-										y2="50" :y1="50 - cast.forecast * 50"
+										y2="30" :y1="30 - cast.forecast * 30"
 										stroke="black" stroke-width="1"
 							/>
 						</svg>
 						<span>{{ latestForecast(forecasts.rpleader, team) }}</span>
 					</b-td>
 					<b-td>
-						<svg width="150" height="50">
+						<svg width="130" height="30">
 							<line v-for="cast in teamForecasts(forecasts.cap, team)"
 													 :x1="cast.match" :x2="cast.match"
-													 y2="50" :y1="50 - cast.forecast * 50"
+													 y2="30" :y1="30 - cast.forecast * 30"
 													 stroke="black" stroke-width="1"
 							/>
 						</svg>
