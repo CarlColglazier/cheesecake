@@ -105,7 +105,7 @@ func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
 from match
 inner join prediction_history on prediction_history."match"=match."key"
 where match.winning_alliance is not null and length(match.winning_alliance) > 0
-and model='eloscores' and match.event_key like '2019%'`,
+and model='eloscore2020' and match.event_key like '2020%'`,
 	)
 	if err != nil {
 		log.Println(err)
