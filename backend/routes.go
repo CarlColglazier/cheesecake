@@ -48,6 +48,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 	case "match_score":
 		jStr, _ := json.Marshal(data.MessageData)
 		var m tba.Match
+		log.Printf("%v\n", data)
 		json.Unmarshal(jStr, &m)
 		log.Printf("%v", m)
 		matchList := []tba.Match{m}
