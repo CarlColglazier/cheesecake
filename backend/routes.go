@@ -8,18 +8,19 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func runServer(config *Config) {
 	router := mux.NewRouter()
-	router.HandleFunc("/", Index)
+	router.HandleFunc("/", Index).Methods("GET")
+	router.HandleFunc("/", config.Webhook).Methods("POST")
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
-	//router.HandleFunc("/elo", config.CalcEloScores)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
@@ -29,6 +30,32 @@ func runServer(config *Config) {
 func Index(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, `{}`)
+}
+
+type WebhookData struct {
+	MessageData map[string]interface{} `json:"message_data"`
+	MessageType string                 `json:"message_type:"`
+}
+
+func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var data WebhookData
+	err := decoder.Decode(&data)
+	if err != nil {
+		log.Println(err)
+	}
+	switch data.MessageType {
+	case "verification":
+		log.Printf("%v", data)
+	case "match_score":
+		jStr, _ := json.Marshal(data.MessageData)
+		var m tba.Match
+		json.Unmarshal(jStr, &m)
+		log.Printf("%v", m)
+		matchList := []tba.Match{m}
+		config.insertMatches(matchList)
+		return
+	}
 }
 
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
@@ -81,18 +108,6 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(events)
 }
-
-/*
-func (config *Config) CalcEloScores(w http.ResponseWriter, r *http.Request) {
-	pred := NewEloScoreModel(2019)
-	j, err := calculateModel(config, pred, "eloscores")
-	if err != nil {
-		log.Println(err)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(j)
-}
-*/
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
 	rows, err := config.conn.Query(
