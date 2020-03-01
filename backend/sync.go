@@ -217,7 +217,7 @@ func (config *Config) predict() {
 				match.Match.Key, modelkey, p,
 			)
 			qCount += 1
-			if match.Official {
+			if match.Official && match.Match.ScoreBreakdown != nil {
 				model.AddResult(match)
 			}
 		}
