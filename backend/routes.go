@@ -33,8 +33,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 type WebhookData struct {
-	MessageData string `json:"message_data"`
-	MessageType string `json:"message_type"`
+	MessageData map[string]interface{} `json:"message_data"`
+	MessageType string                 `json:"message_type"`
 }
 
 func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
@@ -47,12 +47,28 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 	switch data.MessageType {
 	case "match_score":
 		var m tba.Match
-		log.Printf("%v\n", data)
-		json.Unmarshal([]byte(data.MessageData), &m)
+		mData := data.MessageData["match"]
+		jStr, _ := json.Marshal(mData)
+		log.Println(string(jStr))
+		json.Unmarshal([]byte(jStr), &m)
 		log.Printf("%v", m)
+		// This code exists because TBA uses team_keys for the API
+		// and team for the Webhooks.
+		mD := mData.(map[string]interface{})
+		mD = mD["alliances"].(map[string]interface{})
+		mDred := mD["red"].(map[string]interface{})
+		mDblue := mD["blue"].(map[string]interface{})
+		mDredTeams := mDred["teams"].([]interface{})
+		mDblueTeams := mDblue["teams"].([]interface{})
+		for _, team := range mDredTeams {
+			m.Alliances.Red.TeamKeys = append(m.Alliances.Red.TeamKeys, team.(string))
+		}
+		for _, team := range mDblueTeams {
+			m.Alliances.Blue.TeamKeys = append(m.Alliances.Blue.TeamKeys, team.(string))
+		}
+		log.Printf("%v", m.Alliances.Red.TeamKeys)
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
-		return
 	case "verification":
 		log.Println("Verification")
 		log.Printf("%v", data)
