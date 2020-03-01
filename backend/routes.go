@@ -34,7 +34,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 type WebhookData struct {
 	MessageData map[string]interface{} `json:"message_data"`
-	MessageType string                 `json:"message_type:"`
+	MessageType string                 `json:"message_type"`
 }
 
 func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
@@ -45,10 +45,6 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	switch data.MessageType {
-	case "verification":
-		log.Printf("%v", data)
-	case "ping":
-		log.Printf("%v", data)
 	case "match_score":
 		jStr, _ := json.Marshal(data.MessageData)
 		var m tba.Match
@@ -57,6 +53,15 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
 		return
+	case "verification":
+		log.Println("Verification")
+		log.Printf("%v", data)
+	case "ping":
+		log.Println("Pinged")
+		fallthrough
+	default:
+		log.Println("Default")
+		log.Printf("%v", data)
 	}
 }
 
