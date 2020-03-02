@@ -45,6 +45,11 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 	switch data.MessageType {
+	case "schedule_updated":
+		key := data.MessageData["event_key"]
+		matches, _ := config.tba.GetEventMatches(key.(string))
+		config.insertMatches(matches)
+		//config.tba.
 	case "match_score":
 		var m tba.Match
 		mData := data.MessageData["match"]
@@ -69,6 +74,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v", m.Alliances.Red.TeamKeys)
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
+		// TODO: This should be some kind of real-time version.
 		config.predict()
 	case "verification":
 		log.Println("Verification")
