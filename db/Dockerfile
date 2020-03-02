@@ -1,4 +1,4 @@
-FROM postgres:latest
+FROM postgres:12.2
 ENV POSTGRES_USER cheese
 ENV POSTGRES_PASSWORD cheesepass4279
 ENV POSTGRES_DB cheesecake
