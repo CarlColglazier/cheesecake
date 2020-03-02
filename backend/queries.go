@@ -250,7 +250,7 @@ join event on (event.key = match.event_key)
 func (config *Config) getEvents(year int) ([]Event, error) {
 	rows, err := config.conn.Query(
 		context.Background(),
-		"SELECT key, short_name FROM event where event.year="+strconv.Itoa(year))
+		"SELECT key, short_name, end_date FROM event where event.year="+strconv.Itoa(year))
 	defer rows.Close()
 	if err != nil {
 		return nil, err
@@ -261,6 +261,7 @@ func (config *Config) getEvents(year int) ([]Event, error) {
 		rows.Scan(
 			&event.Key,
 			&event.ShortName,
+			&event.EndDate,
 		)
 		events = append(events, event)
 	}

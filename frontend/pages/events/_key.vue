@@ -1,8 +1,10 @@
 <template>
   <content>
 		<h1>Events</h1>
-		<ul v-for="event in events">
-	    <li><nuxt-link :to="'/event/' + event.key">{{ event.short_name }}</nuxt-link></li>
+		<ul>
+	    <li v-for="event in events">
+				<nuxt-link :to="'/event/' + event.key">{{ event.short_name }}</nuxt-link>
+			</li>
 		</ul>
   </content>
 </template>

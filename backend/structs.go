@@ -74,4 +74,5 @@ type ForecastHistory struct {
 type Event struct {
 	ShortName *string `json:"short_name"`
 	Key       string  `json:"key"`
+	EndDate   string  `json:"end_date"`
 }
