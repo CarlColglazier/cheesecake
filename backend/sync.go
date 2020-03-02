@@ -188,7 +188,7 @@ func reset(config *Config) {
 	config.insertTeams(teamList)
 	config.syncEvents()
 	// Sync 2019-2020 events.
-	for year := 2020; year <= 2020; year++ {
+	for year := 2019; year <= 2020; year++ {
 		matchChan, _, numEvents := config.tba.GetAllEventMatches(year)
 		for i := 0; i < numEvents; i++ {
 			log.Printf("Upserting event #%d of %d", i, numEvents)
