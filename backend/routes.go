@@ -44,13 +44,13 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&data)
 	if err != nil {
 		log.Println(err)
+		return
 	}
 	switch data.MessageType {
 	case "schedule_updated":
 		key := data.MessageData["event_key"]
 		matches, _ := config.tba.GetEventMatches(key.(string))
 		config.insertMatches(matches)
-		//config.tba.
 	case "match_score":
 		var m tba.Match
 		mData := data.MessageData["match"]
@@ -134,6 +134,8 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 	events, err := config.getEvents(year)
 	if err != nil {
 		log.Println(err)
+		json.NewEncoder(w).Encode([0]Match{})
+		return
 	}
 	json.NewEncoder(w).Encode(events)
 }
@@ -154,6 +156,8 @@ and model='eloscore2020' and match.event_key like '2020%' and event.event_type <
 	)
 	if err != nil {
 		log.Println(err)
+		json.NewEncoder(w).Encode([0]string{})
+		return
 	}
 	var brier float32
 	var correct int
