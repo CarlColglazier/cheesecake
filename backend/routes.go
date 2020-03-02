@@ -104,6 +104,8 @@ func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request)
 	}
 	if err != nil {
 		log.Println(err)
+		json.NewEncoder(w).Encode([0]string{})
+		return
 	}
 	json.NewEncoder(w).Encode(matches)
 }
@@ -114,6 +116,8 @@ func (config *Config) getEventForecastsReq(w http.ResponseWriter, r *http.Reques
 	fore, err := config.getEventForecasts(vars["event"])
 	if err != nil {
 		log.Println(err)
+		json.NewEncoder(w).Encode([0]ForecastEntry{})
+		return
 	}
 	json.NewEncoder(w).Encode(fore)
 }
