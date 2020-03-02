@@ -44,10 +44,13 @@ export default {
 			forecasts["cap"] = fore.filter(g => {
 				return g.model === "cap";
 			});
+			forecasts["meanrp"] = fore.filter(g => {
+				return g.model === "meanrp";
+			});
 			return { matches: data, forecasts: forecasts }
 		} catch (e) {
 			console.error(e)
-			return { matches: [], forecasts: {"rpleader": [], "cap": []} }
+			return { matches: [], forecasts: {"rpleader": [], "cap": [], "rpmean": []} }
 		}
 	},
 	mounted() {

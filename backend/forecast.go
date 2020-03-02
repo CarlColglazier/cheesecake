@@ -183,18 +183,43 @@ func findFuture(time int, matches []MatchEntry) future {
 					}
 				}
 			}
+			if match.Match.Key[0:4] == "2020" {
+				energized := match.Predictions["energized"]
+				shield := match.Predictions["shield"]
+				if energized == nil || shield == nil {
+					log.Println("Issue getting predictors.")
+					continue
+				}
+				for key, val := range energized.Prediction {
+					k := val.(float64)
+					if rand.Float64() < k {
+						for _, team := range match.Alliances[key].Teams {
+							f.addPoints(team, 1)
+						}
+					}
+				}
+				for key, val := range shield.Prediction {
+					k := val.(float64)
+					if rand.Float64() < k {
+						for _, team := range match.Alliances[key].Teams {
+							f.addPoints(team, 1)
+						}
+					}
+				}
+			}
 		}
 	}
 	return f
 }
 
-func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]int, map[string]int) {
+func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]int, map[string]int, map[string]float64) {
 	futures := make([]future, 100)
 	for i, _ := range futures {
 		futures[i] = findFuture(time, matches)
 	}
 	leaders := make(map[string]int)
 	captains := make(map[string]int)
+	mean_rp := make(map[string]float64)
 	for _, val := range futures {
 		leader := val.leader()
 		c := val.rankOrder()
@@ -207,6 +232,9 @@ func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]
 		for _, c := range caps {
 			captains[c] += 1
 		}
+		for team, points := range val.rp {
+			mean_rp[team] += float64(points) / float64(len(futures))
+		}
 	}
-	return leaders, captains
+	return leaders, captains, mean_rp
 }

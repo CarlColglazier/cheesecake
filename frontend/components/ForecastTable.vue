@@ -7,13 +7,14 @@
 					<b-th>Team</b-th>
 					<b-th>First Seed?</b-th>
 					<b-th>Captain?</b-th>
+					<b-th>Mean RP</b-th>
 				</b-tr>
 			</b-thead>
 			<b-tbody>
-				<b-tr v-for="team in allTeams(forecasts.cap).sort(function(a, b) { return a < b }).reverse()" :key="team">
+				<b-tr v-for="team in sortedTeams" :key="team">
 					<b-td>{{ team }}</b-td>
 					<b-td>
-						<svg width="150" height="30">
+						<svg width="100" height="30">
 							<line v-for="cast in teamForecasts(forecasts.rpleader, team)"
 										:x1="cast.match" :x2="cast.match"
 										y2="30" :y1="30 - cast.forecast * 30"
@@ -23,7 +24,7 @@
 						<span>{{ latestForecast(forecasts.rpleader, team) }}</span>
 					</b-td>
 					<b-td>
-						<svg width="130" height="30">
+						<svg width="100" height="30">
 							<line v-for="cast in teamForecasts(forecasts.cap, team)"
 													 :x1="cast.match" :x2="cast.match"
 													 y2="30" :y1="30 - cast.forecast * 30"
@@ -31,6 +32,16 @@
 							/>
 						</svg>
 						<span>{{ latestForecast(forecasts.cap, team) }}</span>
+					</b-td>
+					<b-td>
+						<svg width="100" height="30">
+							<line v-for="cast in teamForecasts(forecasts.meanrp, team)"
+										:x1="cast.match" :x2="cast.match"
+										y2="30" :y1="30 - cast.forecast"
+										stroke="black" stroke-width="1"
+							/>
+						</svg>
+						<span>{{ Math.round(latestForecast(forecasts.meanrp, team)) }}</span>
 					</b-td>
 				</b-tr>
 			</b-tbody>
@@ -76,6 +87,14 @@ function topTeams(forecast) {
 	return max_fore.map(function(f) { return f.team });
 }
 
+function sortedTeams() {
+	let forecasts = this.forecasts;
+	let teams = allTeams(forecasts.meanrp).sort((a, b) => {
+		return latestForecast(forecasts.meanrp, a) - latestForecast(forecasts.meanrp, b);
+	}).reverse();
+	return teams;
+}
+
 
 export default {
 	methods: {
@@ -83,6 +102,9 @@ export default {
 		latestForecast: latestForecast,
 		teamForecasts: teamForecasts,
 		maxMatch: maxMatch
+	},
+	computed: {
+		sortedTeams: sortedTeams
 	},
 	props: ['forecasts']
 }

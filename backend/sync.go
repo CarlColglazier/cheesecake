@@ -263,7 +263,7 @@ func (config *Config) forecast2019() {
 				fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
 				forecastMatches = append(forecastMatches, fmatch)
 			}
-			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			leadersCast, capsCast, _ := config.forecastEvent(match.Match.Time, forecastMatches)
 			for team, times := range leadersCast {
 				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
 					"rpleader", match.Match.Key, team, float64(times)/100.0,
@@ -313,6 +313,8 @@ func (config *Config) forecast2020() {
 	matches, _ := config.getMatches()
 	qCount := 0
 	eloModel2020 := NewEloScoreModel(2020, 40.0)
+	shieldModel := NewBetaModel(0.5, 12.0, "shieldOperationalRankingPoint", 2020)
+	energizedModel := NewBetaModel(0.5, 12.0, "shieldEnergizedRankingPoint", 2020)
 	for _, match := range matches {
 		if match.Match.Key[0:4] != "2020" {
 			continue
@@ -331,10 +333,14 @@ func (config *Config) forecast2020() {
 					continue
 				}
 				p := eloModel2020.Predict(fmatch)
+				p2 := shieldModel.Predict(fmatch)
+				p3 := energizedModel.Predict(fmatch)
 				fmatch.Predictions["elo_score"] = &PredictionHistory{Prediction: p}
+				fmatch.Predictions["shield"] = &PredictionHistory{Prediction: p2}
+				fmatch.Predictions["energized"] = &PredictionHistory{Prediction: p3}
 				forecastMatches = append(forecastMatches, fmatch)
 			}
-			leadersCast, capsCast := config.forecastEvent(match.Match.Time, forecastMatches)
+			leadersCast, capsCast, avgRp := config.forecastEvent(match.Match.Time, forecastMatches)
 			for team, times := range leadersCast {
 				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
 					"rpleader", match.Match.Key, team, float64(times)/100.0,
@@ -344,6 +350,12 @@ func (config *Config) forecast2020() {
 			for team, times := range capsCast {
 				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
 					"cap", match.Match.Key, team, float64(times)/100.0,
+				)
+				qCount += 1
+			}
+			for team, rp := range avgRp {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"meanrp", match.Match.Key, team, rp,
 				)
 				qCount += 1
 			}
