@@ -120,6 +120,17 @@ func (tba *TheBlueAlliance) GetAllEventMatches(year int) (chan []Match, error, i
 	return channel, nil, len(events)
 }
 
+func (tba *TheBlueAlliance) GetEventMatches(key string) ([]Match, error) {
+	url := fmt.Sprintf("event/%s/matches", key)
+	matchesString, _ := tba.tbaRequest(url)
+	var matchList []Match
+	err = json.Unmarshal([]byte(matchesString), &matchList)
+	if err != nil {
+		return nil, err
+	}
+	return matchList
+}
+
 func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
 	events, err := tba.tbaRequest(fmt.Sprintf("events/%d", year))
 	if err != nil {
