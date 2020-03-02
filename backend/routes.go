@@ -69,6 +69,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%v", m.Alliances.Red.TeamKeys)
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
+		config.predict()
 	case "verification":
 		log.Println("Verification")
 		log.Printf("%v", data)
