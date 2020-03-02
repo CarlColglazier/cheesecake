@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/carlcolglazier/cheesecake/tba"
 	"github.com/gorilla/handlers"
@@ -23,7 +24,8 @@ func runServer(config *Config) {
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
-	http.ListenAndServe(":8080", handler)
+	handlerWithTimeout := http.TimeoutHandler(handler, time.Second*10, "Timeout!")
+	http.ListenAndServe(":8080", handlerWithTimeout)
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
