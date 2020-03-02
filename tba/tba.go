@@ -128,7 +128,7 @@ func (tba *TheBlueAlliance) GetEventMatches(key string) ([]Match, error) {
 	if err != nil {
 		return nil, err
 	}
-	return matchList
+	return matchList, nil
 }
 
 func (tba *TheBlueAlliance) GetAllEvents(year int) ([]Event, error) {
