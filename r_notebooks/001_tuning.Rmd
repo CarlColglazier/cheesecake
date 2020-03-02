@@ -13,71 +13,57 @@ source("shared.R")
 
 Get all matches (which are not ties).
 
-```{r}
-results <- dbGetQuery(con, "select
-	(winning_alliance='red')::int as winner,
-	prediction
+```{sql, connection=con}
+select 
+  avg(power((winning_alliance='red')::int - (prediction->'red')::text::float, 2)) as brier,
+	count(*) filter 
+		(where (winning_alliance='red' and (prediction->'red')::text::float > 0.5) or (winning_alliance='blue' and (prediction->'red')::text::float < 0.5)) as correct,
+	count(*) as count
 from match
-inner join prediction_history on prediction_history.\"match\"=match.\"key\"
+inner join prediction_history on prediction_history."match"=match."key"
+inner join event on match.event_key=event.key
 where match.winning_alliance is not null and length(match.winning_alliance) > 0
-and model='eloscores'")
+and model='eloscore2020' and match.event_key like '2020%'
+and event.event_type < 7
+```
+
+```{sql, connection=con, output.var="results"}
+select
+	(winning_alliance='red')::int as winner,
+	(prediction->'red')::text::float as prediction
+from match
+inner join prediction_history on prediction_history."match"=match."key"
+inner join event on match.event_key=event.key
+where match.winning_alliance is not null and length(match.winning_alliance) > 0
+and model='eloscore2020'
+and event.event_type < 7
+```
+
+```{r}
+nrow(results)
 ```
 
 How good is our calibration?
 
 ```{r}
-results %>%
+rt <- results %>%
   mutate(correct = abs(winner - prediction) < 0.5) %>%
   group_by(gr=cut(prediction, breaks= seq(0, 1, by = 0.1)) ) %>%
-  summarise(n= n(), c=mean(correct))
+  summarise(n= n(), results=mean(correct))
+rt[,"results"] = bind_rows(1 - rt[1:5,"results"], rt[6:10,"results"])
+rt[,"predicted_range"] = 1:10/10-0.05
+rt
 ```
+
+```{r}
+ggplot(rt, aes(x=predicted_range, y=results)) +
+  geom_point(aes(size=n)) +
+  geom_abline()
+```
+
 
 
 ```{r}
 mean((results$prediction - results$winner)^2)
-```
-
-## Summary
-
-```{sql, connection=con}
-select
-	model,
-	avg(POWER((winning_alliance='red')::int - prediction, 2)) as brier,
-	count(*) filter 
-		(where (winning_alliance='red' and prediction > 0.5) or (winning_alliance='blue' and prediction < 0.5)) as correct,
-	count(*) as count
-from match
-inner join prediction_history on prediction_history.match=match.key
-where match.winning_alliance is not null and length(match.winning_alliance) > 0
-group by model
-```
-
-
-```{r}
-results <- dbGetQuery(con, "select m1.match, (match.winning_alliance='red')::int as winner, m1.prediction as eloscores, m2.prediction as marbles, m3.prediction as elowins
-	from match
-left join
-	(select match, prediction from prediction_history where model='eloscores') m1
-on (match.key = m1.match)
-left join
-	(select match, prediction from prediction_history ph where model='marbles') m2
-on (m1.match = m2.match)
-left join
-	(select match, prediction from prediction_history ph where model='elowins') m3
-on (m1.match = m3.match)
-where match.winning_alliance is not null and length(match.winning_alliance) > 0
-order by match.time")
-```
-
-
-```{r}
-filt <- results %>% select(winner, eloscores, marbles, elowins)
-filt$winner = as.factor(filt$winner)
-```
-
-```{r}
-logit <- glm(winner ~ marbles + eloscores, data=filt, family = "binomial")
-l_p <- predict(logit, newdata = filt, type="response")
-mean((l_p - results$winner)^2)
 ```
 
