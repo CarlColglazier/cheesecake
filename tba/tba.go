@@ -124,7 +124,7 @@ func (tba *TheBlueAlliance) GetEventMatches(key string) ([]Match, error) {
 	url := fmt.Sprintf("event/%s/matches", key)
 	matchesString, _ := tba.tbaRequest(url)
 	var matchList []Match
-	err = json.Unmarshal([]byte(matchesString), &matchList)
+	err := json.Unmarshal([]byte(matchesString), &matchList)
 	if err != nil {
 		return nil, err
 	}
