@@ -119,11 +119,13 @@ func (config *Config) getEventForecastsReq(w http.ResponseWriter, r *http.Reques
 }
 
 func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
 	year, err := strconv.Atoi(vars["year"])
 	if err != nil {
 		log.Println(err)
-		json.NewEncoder(w).Encode("{}")
+		json.NewEncoder(w).Encode([0]Match{})
+		return
 	}
 	events, err := config.getEvents(year)
 	if err != nil {
