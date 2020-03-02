@@ -55,7 +55,7 @@ func main() {
 	log.Println("Config created")
 	log.Println("Adding predictors")
 	config.models["eloscore2019"] = NewEloScoreModel(2019, 21.1)
-	config.models["eloscore2020"] = NewEloScoreModel(2020, 40.0)
+	config.models["eloscore2020"] = NewEloScoreModel(2020, 30.0)
 	config.models["rocket"] = NewBetaModel(0.5, 12.0, "completeRocketRankingPoint", 2019)
 	config.models["hab"] = NewBetaModel(0.7229, 2.4517, "habDockingRankingPoint", 2019)
 	config.models["shieldop"] = NewBetaModel(0.5, 12.0, "shieldOperationalRankingPoint", 2020)

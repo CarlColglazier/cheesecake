@@ -149,8 +149,9 @@ func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
 	count(*) as count
 from match
 inner join prediction_history on prediction_history."match"=match."key"
+inner join event on match.event_key=event.key
 where match.winning_alliance is not null and length(match.winning_alliance) > 0
-and model='eloscore2020' and match.event_key like '2020%'`,
+and model='eloscore2020' and match.event_key like '2020%' and event.event_type < 7`,
 	)
 	if err != nil {
 		log.Println(err)
