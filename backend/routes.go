@@ -15,10 +15,9 @@ import (
 
 func runServer(config *Config) {
 	router := mux.NewRouter()
-	router.HandleFunc("/", Index).Methods("GET")
 	router.HandleFunc("/", config.Webhook).Methods("POST")
+	router.HandleFunc("/", Index).Methods("GET")
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
-	router.HandleFunc("/events", config.EventReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
 	router.HandleFunc("/brier", config.Brier)
@@ -115,14 +114,6 @@ func (config *Config) getEventForecastsReq(w http.ResponseWriter, r *http.Reques
 		log.Println(err)
 	}
 	json.NewEncoder(w).Encode(fore)
-}
-
-func (config *Config) EventReq(w http.ResponseWriter, r *http.Request) {
-	events, err := config.getEvents(2019)
-	if err != nil {
-		log.Println(err)
-	}
-	json.NewEncoder(w).Encode(events)
 }
 
 func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
