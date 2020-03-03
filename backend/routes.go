@@ -18,6 +18,7 @@ func runServer(config *Config) {
 	router := mux.NewRouter()
 	router.HandleFunc("/", config.Webhook).Methods("POST")
 	router.HandleFunc("/", Index).Methods("GET")
+	router.HandleFunc("/status", config.DBstatus).Methods("GET")
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
@@ -26,6 +27,13 @@ func runServer(config *Config) {
 	handler := handlers.CORS(corsObj)(router)
 	handlerWithTimeout := http.TimeoutHandler(handler, time.Second*10, "Timeout!")
 	http.ListenAndServe(":8080", handlerWithTimeout)
+}
+
+func (config *Config) DBstatus(w http.ResponseWriter, r *http.Request) {
+	stat := config.conn.Stat()
+	log.Printf("Total %d, Aqc %d", stat.TotalConns(), stat.AcquiredConns())
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{}`)
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
