@@ -8,7 +8,7 @@ import (
 )
 
 func Connect(host, applicationName string) (*pgxpool.Pool, error) {
-	connString := "postgres://cheese:cheesepass4279@" + host + ":5432/" + applicationName + "?sslmode=verify-ca&pool_max_conns=2"
+	connString := "postgres://cheese:cheesepass4279@" + host + ":5432/" + applicationName + "?pool_max_conns=2"
 	fmt.Println(connString)
 	return pgxpool.Connect(context.Background(), connString)
 }
