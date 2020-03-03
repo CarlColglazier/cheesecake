@@ -25,9 +25,5 @@ func Connect(host, applicationName string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		fmt.Println("Disconnecting from pgsql")
-		conn.Close()
-	}()
 	return conn, nil
 }
