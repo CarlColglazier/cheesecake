@@ -21,5 +21,13 @@ func Connect(host, applicationName string) (*pgxpool.Pool, error) {
 	config.MaxConnLifetime = 10 * time.Second
 	config.HealthCheckPeriod = 15 * time.Second
 	config.ConnConfig.LogLevel = pgx.LogLevelDebug
-	return pgxpool.ConnectConfig(context.Background(), config)
+	conn, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		fmt.Println("Disconnecting from pgsql")
+		conn.Close()
+	}()
+	return conn, nil
 }

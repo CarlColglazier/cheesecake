@@ -25,7 +25,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
 	handler := handlers.CORS(corsObj)(router)
-	handlerWithTimeout := http.TimeoutHandler(handler, time.Second*10, "Timeout!")
+	handlerWithTimeout := http.TimeoutHandler(handler, time.Second*10, "[{'error': 'Timeout!'}]")
 	http.ListenAndServe(":8080", handlerWithTimeout)
 }
 
@@ -149,7 +149,12 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.conn.Query(
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
+	rows, err := conn.Query(
 		context.Background(),
 		`select 
   avg(power((winning_alliance='red')::int - (prediction->'red')::text::float, 2)) as brier,
