@@ -12,6 +12,11 @@ import (
 
 // Upserts a list of teams into the database.
 func (config *Config) insertTeams(teamList []tba.Team) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	for _, row := range teamList {
 		batch.Queue(
@@ -19,7 +24,7 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 			row.Key, row.TeamNumber, row.Name,
 		)
 	}
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < len(teamList); i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -27,7 +32,7 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 			return
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
@@ -35,6 +40,11 @@ func (config *Config) insertTeams(teamList []tba.Team) {
 
 // Upserts a list of events into the database.
 func (config *Config) insertEvents(eventList []tba.Event) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	for _, row := range eventList {
 		batch.Queue(
@@ -42,7 +52,7 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 			row.Key, row.EndDate, row.EventType, row.ShortName, row.Year,
 		)
 	}
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < len(eventList); i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -50,7 +60,7 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 			return
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 		log.Println(err)
@@ -58,7 +68,12 @@ func (config *Config) insertEvents(eventList []tba.Event) {
 }
 
 func (config *Config) version() int {
-	row, err := config.conn.Query(context.Background(), "select \"version\" from schema_migrations")
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return -1
+	}
+	defer conn.Release()
+	row, err := conn.Query(context.Background(), "select \"version\" from schema_migrations")
 	if err != nil {
 		return 0
 	}
@@ -70,6 +85,11 @@ func (config *Config) version() int {
 }
 
 func (config *Config) insertMatches(matchList []tba.Match) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	reg, err := regexp.Compile("[^0-9]+")
 	if err != nil {
@@ -129,7 +149,7 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			)
 		}
 	}
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < len(matchList)*9; i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -143,6 +163,11 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 }
 
 func (config *Config) insertForecasts(forecasts []ForecastHistory) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	for _, row := range forecasts {
 		batch.Queue(
@@ -150,7 +175,7 @@ func (config *Config) insertForecasts(forecasts []ForecastHistory) {
 			row.Model, row.MatchKey, row.TeamKey, row.Forecast,
 		)
 	}
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < len(forecasts); i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -158,7 +183,7 @@ func (config *Config) insertForecasts(forecasts []ForecastHistory) {
 			return
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
@@ -204,6 +229,11 @@ func reset(config *Config) {
 
 // Sync predictors
 func (config *Config) predict() {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
@@ -223,7 +253,7 @@ func (config *Config) predict() {
 		}
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -231,13 +261,18 @@ func (config *Config) predict() {
 			//break
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
 }
 
 func (config *Config) forecast2019() {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
@@ -282,7 +317,7 @@ func (config *Config) forecast2019() {
 		simp_model2.AddResult(match)
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -290,7 +325,7 @@ func (config *Config) forecast2019() {
 			//break
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
@@ -309,6 +344,11 @@ func lastPlayed(event string, matches []MatchEntry) int {
 }
 
 func (config *Config) forecast2020() {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
 	batch := &pgx.Batch{}
 	matches, _ := config.getMatches()
 	qCount := 0
@@ -365,7 +405,7 @@ func (config *Config) forecast2020() {
 		}
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
-	res := config.conn.SendBatch(context.Background(), batch)
+	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -373,12 +413,10 @@ func (config *Config) forecast2020() {
 			//break
 		}
 	}
-	err := res.Close()
+	err = res.Close()
 	if err != nil {
 		log.Println("Error closing batch.")
 	}
-	//config.forecast()
-
 }
 
 func (config *Config) forecast() {
