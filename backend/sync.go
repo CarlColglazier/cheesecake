@@ -242,7 +242,7 @@ func (config *Config) predictMatch(match MatchEntry) {
 		p := model.Predict(match)
 		// This does not do anything if the prediction
 		// already exists.
-		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO NOTHING",
+		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO UPDATE set prediction = $3",
 			match.Match.Key, modelkey, p,
 		)
 		qCount += 1

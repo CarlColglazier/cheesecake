@@ -64,7 +64,9 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, match := range eventMatches {
-			config.predictMatch(match)
+			if match.Match.ScoreBreakdown == nil {
+				config.predictMatch(match)
+			}
 		}
 	case "match_score":
 		var m tba.Match
@@ -88,7 +90,16 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
 		// TODO: This should be some kind of real-time version.
-		config.predict()
+		//config.predict()
+		eventMatches, err := config.getEventMatches2020(m.EventKey)
+		if err != nil {
+			return
+		}
+		for _, match := range eventMatches {
+			if match.Match.ScoreBreakdown == nil {
+				config.predictMatch(match)
+			}
+		}
 	case "verification":
 		log.Println("Verification")
 		log.Printf("%v", data)
