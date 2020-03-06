@@ -70,9 +70,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		var m tba.Match
 		mData := data.MessageData["match"]
 		jStr, _ := json.Marshal(mData)
-		log.Println(string(jStr))
 		json.Unmarshal([]byte(jStr), &m)
-		log.Printf("%v", m)
 		// This code exists because TBA uses team_keys for the API
 		// and team for the Webhooks.
 		mD := mData.(map[string]interface{})
@@ -87,7 +85,6 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		for _, team := range mDblueTeams {
 			m.Alliances.Blue.TeamKeys = append(m.Alliances.Blue.TeamKeys, team.(string))
 		}
-		log.Printf("%v", m.Alliances.Red.TeamKeys)
 		matchList := []tba.Match{m}
 		config.insertMatches(matchList)
 		// TODO: This should be some kind of real-time version.
