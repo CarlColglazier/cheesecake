@@ -227,6 +227,40 @@ func reset(config *Config) {
 	config.predict()
 }
 
+func (config *Config) predictMatch(match MatchEntry) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+	defer conn.Release()
+	batch := &pgx.Batch{}
+	qCount := 0
+	for modelkey, model := range config.models {
+		if !model.SupportsYear(match.year()) {
+			continue
+		}
+		p := model.Predict(match)
+		// This does not do anything if the prediction
+		// already exists.
+		batch.Queue("insert into prediction_history (match, model, prediction) VALUES ($1, $2, $3) ON CONFLICT ON CONSTRAINT prediction_history_pkey DO NOTHING",
+			match.Match.Key, modelkey, p,
+		)
+		qCount += 1
+	}
+	res := conn.SendBatch(context.Background(), batch)
+	for i := 0; i < qCount; i++ {
+		_, err := res.Exec()
+		if err != nil {
+			log.Println(err)
+			//break
+		}
+	}
+	err = res.Close()
+	if err != nil {
+		log.Println("Error closing batch.")
+	}
+}
+
 // Sync predictors
 func (config *Config) predict() {
 	conn, err := config.conn.Acquire(context.Background())
@@ -298,7 +332,7 @@ func (config *Config) forecast2019() {
 				fmatch.Predictions["hab"] = &PredictionHistory{Prediction: p3}
 				forecastMatches = append(forecastMatches, fmatch)
 			}
-			leadersCast, capsCast, _ := config.forecastEvent(match.Match.Time, forecastMatches)
+			leadersCast, capsCast, avgRp := config.forecastEvent(match.Match.Time, forecastMatches)
 			for team, times := range leadersCast {
 				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
 					"rpleader", match.Match.Key, team, float64(times)/100.0,
@@ -311,10 +345,18 @@ func (config *Config) forecast2019() {
 				)
 				qCount += 1
 			}
+			for team, rp := range avgRp {
+				batch.Queue("insert into forecast_history (model, match_key, team_key, forecast) VALUES ($1, $2, $3, $4) ON CONFLICT ON CONSTRAINT forecast_pkey DO UPDATE set forecast = $4",
+					"meanrp", match.Match.Key, team, rp,
+				)
+				qCount += 1
+			}
 		}
-		simp_model.AddResult(match)
-		simp_model2.AddResult(match)
-		simp_model2.AddResult(match)
+		if match.Official {
+			simp_model.AddResult(match)
+			simp_model2.AddResult(match)
+			simp_model2.AddResult(match)
+		}
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
 	res := conn.SendBatch(context.Background(), batch)

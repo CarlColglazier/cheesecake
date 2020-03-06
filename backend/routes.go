@@ -56,9 +56,16 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 	}
 	switch data.MessageType {
 	case "schedule_updated":
-		key := data.MessageData["event_key"]
-		matches, _ := config.tba.GetEventMatches(key.(string))
+		key := data.MessageData["event_key"].(string)
+		matches, _ := config.tba.GetEventMatches(key)
 		config.insertMatches(matches)
+		eventMatches, err := config.getEventMatches2020(key)
+		if err != nil {
+			return
+		}
+		for _, match := range eventMatches {
+			config.predictMatch(match)
+		}
 	case "match_score":
 		var m tba.Match
 		mData := data.MessageData["match"]
