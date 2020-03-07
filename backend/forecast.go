@@ -72,12 +72,19 @@ func findFuture(time int, matches []MatchEntry) future {
 			continue
 		}
 		if match.Match.Time <= time {
-			if len(match.Match.WinningAlliance) > 0 {
-				winner := match.Match.WinningAlliance
-				for _, team := range match.Alliances[winner].Teams {
-					f.addPoints(team, 2)
+			if match.played() {
+				if len(match.Match.WinningAlliance) > 0 {
+					winner := match.Match.WinningAlliance
+					for _, team := range match.Alliances[winner].Teams {
+						f.addPoints(team, 2)
+					}
+				} else {
+					for _, alliance := range match.Alliances {
+						for _, team := range alliance.Teams {
+							f.addPoints(team, 1)
+						}
+					}
 				}
-				// TODO: handle ties
 			}
 			// RP things by year.
 			if match.Match.Key[0:4] == "2020" {
