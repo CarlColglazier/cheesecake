@@ -281,7 +281,7 @@ func (config *Config) predict() {
 				match.Match.Key, modelkey, p,
 			)
 			qCount += 1
-			if match.Official && match.Match.ScoreBreakdown != nil {
+			if match.Official && match.played() {
 				model.AddResult(match)
 			}
 		}
@@ -377,7 +377,7 @@ func lastPlayed(event string, matches []MatchEntry) int {
 	last := 0
 	for _, match := range matches {
 		if match.Match.EventKey == event && match.Match.CompLevel == "qm" {
-			if match.Match.ScoreBreakdown != nil && match.Match.MatchNumber > last {
+			if match.played() && match.Match.MatchNumber > last {
 				last = match.Match.MatchNumber
 			}
 		}

@@ -77,7 +77,7 @@ func main() {
 					if !model.SupportsYear(match.year()) {
 						continue
 					}
-					if match.Match.ScoreBreakdown != nil {
+					if match.played() {
 						model.AddResult(match)
 					}
 				}

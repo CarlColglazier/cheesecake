@@ -55,6 +55,11 @@ func (me MatchEntry) year() int {
 	return year
 }
 
+func (m MatchEntry) played() bool {
+	return m.Alliances["blue"].Alliance.Score > 0 &&
+		m.Alliances["red"].Alliance.Score > 0
+}
+
 //
 type PredictionHistory struct {
 	//Key        int     `db:"key"`
