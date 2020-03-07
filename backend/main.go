@@ -66,6 +66,18 @@ func main() {
 	if dbVersion == 0 {
 		reset(config)
 	}
+	// Set up models.
+	matches, _ := config.getMatches()
+	for _, match := range matches {
+		for _, model := range config.models {
+			if !model.SupportsYear(match.year()) {
+				continue
+			}
+			if match.Match.ScoreBreakdown != nil {
+				model.AddResult(match)
+			}
+		}
+	}
 	// Parse command line input
 	args := os.Args[1:]
 	if len(args) == 1 {
