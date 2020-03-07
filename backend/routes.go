@@ -96,7 +96,15 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, match := range eventMatches {
-			if match.Match.ScoreBreakdown == nil {
+			// Add match to models
+			if match.Match.Key == m.Key {
+				for _, model := range config.models {
+					if model.SupportsYear(match.year()) {
+						model.AddResult(match)
+					}
+				}
+			}
+			if !match.played() {
 				config.predictMatch(match)
 			}
 		}
