@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"sort"
 )
@@ -219,7 +220,7 @@ func findFuture(time int, matches []MatchEntry) future {
 	return f
 }
 
-func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]int, map[string]int, map[string]float64) {
+func (config *Config) forecastEvent(time int, matches []MatchEntry) ([2]map[string]int, [2]map[string]float64) {
 	futures := make([]future, 100)
 	for i, _ := range futures {
 		futures[i] = findFuture(time, matches)
@@ -227,6 +228,7 @@ func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]
 	leaders := make(map[string]int)
 	captains := make(map[string]int)
 	mean_rp := make(map[string]float64)
+	std_rp := make(map[string]float64)
 	for _, val := range futures {
 		leader := val.leader()
 		c := val.rankOrder()
@@ -243,5 +245,15 @@ func (config *Config) forecastEvent(time int, matches []MatchEntry) (map[string]
 			mean_rp[team] += float64(points) / float64(len(futures))
 		}
 	}
-	return leaders, captains, mean_rp
+	for _, val := range futures {
+		for team, points := range val.rp {
+			std_rp[team] += math.Pow(float64(points)-mean_rp[team], 2) / float64(len(futures))
+		}
+	}
+	for team, value := range std_rp {
+		std_rp[team] = math.Sqrt(value)
+	}
+	ret1 := [2]map[string]int{leaders, captains}
+	ret2 := [2]map[string]float64{mean_rp, std_rp}
+	return ret1, ret2
 }

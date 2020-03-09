@@ -35,7 +35,7 @@
 function eventUpcoming(event) {
 	let date = Date.parse(event.end_date)
 	let now = Date.now()
-	return date - now > 0 &&
+	return date - now >= 0 &&
 				 date - now < 1000 * 60 * 60 * 24 * 7;
 }
 
