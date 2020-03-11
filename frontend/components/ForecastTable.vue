@@ -15,18 +15,12 @@
 				<b-tr v-for="team in sortedTeams" :key="team">
 					<b-td>{{ team }}</b-td>
 					<b-td>
-						<svg width="100" height="50">
-							<line v-for="cast in teamForecasts(forecasts.cap, team)"
-													 :x1="cast.match" :x2="cast.match"
-													 y2="50" :y1="50 - cast.forecast * 50"
-													 stroke="#999" stroke-width="1"
-							/>
-							<line v-for="cast in teamForecasts(forecasts.rpleader, team)"
-													 :x1="cast.match" :x2="cast.match"
-													 y2="50" :y1="50 - cast.forecast * 50"
-													 stroke="#000" stroke-width="1"
-							/>
-						</svg>
+						<RankCanvas
+							:id="team+'-rank'"
+							:team="team"
+							:cap="teamForecasts(forecasts.cap, team)"
+							:leader="teamForecasts(forecasts.rpleader, team)"
+						/>
 					</b-td>
 					<b-td>{{ latestForecast(forecasts.rpleader, team) }}</b-td>
 					</b-td>
@@ -34,28 +28,12 @@
 						{{ latestForecast(forecasts.cap, team) }}
 					</b-td>
 					<b-td>
-						<svg width="100" height="50">
-							<line v-for="cast in teamForecasts(forecasts.meanrp, team)"
-										:x1="cast.match" :x2="cast.match"
-													 :y2="50 - cast.forecast + 3.92 * getStd(forecasts, team, cast.match)"
-													 :y1="50 - cast.forecast - 3.92 * getStd(forecasts, team, cast.match)"
-										stroke="#888" stroke-width="1"
-							/>
-							<line v-for="cast in teamForecasts(forecasts.meanrp, team)"
-													 :x1="cast.match" :x2="cast.match"
-													 :y2="50 - cast.forecast + 1"
-													 :y1="50 - cast.forecast - 1"
-													 stroke="black" stroke-width="1"
-							/>
-							<!--
-									 getStd(forecasts, team, cast.match)
-									 <line v-for="cast in teamForecasts(forecasts.stdrp, team)"
-									 :x1="cast.match" :x2="cast.match"
-									 y2="30" :y1="30 - cast.forecast * 3.92"
-									 stroke="#999" stroke-width="1"
-									 />
-							-->
-						</svg>
+						<PointCanvas
+							:id="team+'-point'"
+							:team="team"
+							:mean="teamForecasts(forecasts.meanrp, team)"
+							:std="teamForecasts(forecasts.stdrp, team)"
+						/>
 						<span>{{ Math.round(latestForecast(forecasts.meanrp, team)) }}</span>
 					</b-td>
 				</b-tr>
@@ -65,6 +43,9 @@
 </template>
 
 <script>
+import RankCanvas from "~/components/RankCanvas.vue";
+import PointCanvas from "~/components/PointCanvas.vue";
+
 function allTeams(forecasts) {
 	return forecasts.map(m => {
 		return m.team;
@@ -129,6 +110,10 @@ export default {
 	computed: {
 		sortedTeams: sortedTeams
 	},
-	props: ['forecasts']
+	props: ['forecasts'],
+	components: {
+		RankCanvas: RankCanvas,
+		PointCanvas: PointCanvas
+	}
 }
 </script>
