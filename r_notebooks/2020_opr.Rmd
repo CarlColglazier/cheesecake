@@ -1,0 +1,31 @@
+---
+title: "A Bayesian Aproach to OPR"
+---
+
+First, process some data.
+
+```{r}
+source("shared.R")
+```
+
+```{sql, connection=con, output.var="results"}
+select alliance.key, alliance_teams.team_key, alliance.score from match
+inner join alliance on alliance.match_key = match.key
+inner join alliance_teams on alliance_teams.alliance_id = alliance.key
+where event_key = '2020ncwak' AND
+comp_level = 'qm'
+```
+
+A very rough statistic ordered by average score.
+
+```{r}
+results %>%
+  group_by(team_key) %>%
+  summarise(m = mean(score), s = sd(score)) %>%
+  arrange(desc(m))
+```
+
+My model assumes that the score is a linear combination of the contributions of the three teams on the alliance.
+
+$$y = x_1 + x_2 + x_3$$
+
