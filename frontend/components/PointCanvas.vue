@@ -1,5 +1,5 @@
 <template>
-	<canvas width="100" height="50">
+	<canvas width="100" height="50" :id="team+'-point'">
 	</canvas>
 </template>
 
@@ -14,8 +14,12 @@ function draw() {
 	*/
 	ctx.fillStyle = "#000";
 	for (var d of this.mean) {
-		//ctx.fillRect(d.match, 50 - d.forecast * 50, 5, 10);
-		ctx.fillRect(d.match, 50 - d.forecast, 1, d.forecast);
+		ctx.fillRect(
+			d.match,
+			Math.round(50 - d.forecast),
+			1,
+			Math.round(d.forecast)
+		);
 	}
 }
 

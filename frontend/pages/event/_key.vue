@@ -8,9 +8,9 @@
 			<BreakdownTable2019 v-if="yearMatch(2019)" v-bind:matches="matches" />
 			<BreakdownTable2020 v-if="yearMatch(2020)" v-bind:matches="matches" />
 		</section>
-		<secion v-else>
+		<section v-else>
 			<p>No schedule for this event quite yet.</p>
-		</secion>
+		</section>
 	</content>
 </template>
 
@@ -55,9 +55,6 @@ export default {
 			console.error(e)
 			return { matches: [], forecasts: {"rpleader": [], "cap": [], "meanrp": [], "stdrp": []} }
 		}
-	},
-	mounted() {
-		//this.renderChart()
 	},
 	components: {
 		BreakdownTable2019: BreakdownTable2019,

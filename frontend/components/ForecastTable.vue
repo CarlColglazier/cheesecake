@@ -29,7 +29,6 @@
 					</b-td>
 					<b-td>
 						<PointCanvas
-							:id="team+'-point'"
 							:team="team"
 							:mean="teamForecasts(forecasts.meanrp, team)"
 							:std="teamForecasts(forecasts.stdrp, team)"
