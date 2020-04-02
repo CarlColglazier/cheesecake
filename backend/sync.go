@@ -118,16 +118,17 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			"red",
 			row.Key,
 		)
-		for _, team := range row.Alliances.Red.TeamKeys {
+		for pos, team := range row.Alliances.Red.TeamKeys {
 			if reg.Match([]byte(team[3:])) {
 				//log.Println(team)
 				team = "frc9990"
 				//log.Println(team)
 			}
 			batch.Queue(
-				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
+				"insert into alliance_teams (alliance_id, team_key, position) values ($1, $2, $3) ON CONFLICT DO NOTHING",
 				allianceId,
 				team,
+				pos,
 			)
 		}
 		allianceId = row.Key + "_blue"
@@ -138,14 +139,15 @@ func (config *Config) insertMatches(matchList []tba.Match) {
 			"blue",
 			row.Key,
 		)
-		for _, team := range row.Alliances.Blue.TeamKeys {
+		for pos, team := range row.Alliances.Blue.TeamKeys {
 			if reg.Match([]byte(team[3:])) {
 				team = "frc9990"
 			}
 			batch.Queue(
-				"insert into alliance_teams (alliance_id, team_key) values ($1, $2) ON CONFLICT DO NOTHING",
+				"insert into alliance_teams (alliance_id, team_key, position) values ($1, $2, $3) ON CONFLICT DO NOTHING",
 				allianceId,
 				team,
+				pos,
 			)
 		}
 	}
