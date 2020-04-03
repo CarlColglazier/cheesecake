@@ -271,7 +271,11 @@ func (config *Config) predict() {
 	}
 	defer conn.Release()
 	batch := &pgx.Batch{}
-	matches, _ := config.getMatches()
+	matches, err := config.getMatches()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	qCount := 0
 	for _, match := range matches {
 		for modelkey, model := range config.models {
@@ -289,6 +293,7 @@ func (config *Config) predict() {
 		}
 	}
 	log.Printf("Sending %d predictions to database...", qCount)
+	log.Printf("This is out of %d matches.", len(matches))
 	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()

@@ -21,6 +21,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/status", config.DBstatus).Methods("GET")
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
+	router.HandleFunc("/team/{team}/{year}", config.TeamYearReq)
 	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
@@ -59,7 +60,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		key := data.MessageData["event_key"].(string)
 		matches, _ := config.tba.GetEventMatches(key)
 		config.insertMatches(matches)
-		eventMatches, err := config.getEventMatches2020(key)
+		eventMatches, err := config.getEventMatches(key)
 		if err != nil {
 			return
 		}
@@ -91,7 +92,7 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 		config.insertMatches(matchList)
 		// TODO: This should be some kind of real-time version.
 		//config.predict()
-		eventMatches, err := config.getEventMatches2020(m.EventKey)
+		eventMatches, err := config.getEventMatches(m.EventKey)
 		if err != nil {
 			return
 		}
@@ -123,16 +124,8 @@ func (config *Config) Webhook(w http.ResponseWriter, r *http.Request) {
 func (config *Config) GetEventMatchesReq(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	vars := mux.Vars(r)
-	year := vars["event"][0:4]
-	var matches []MatchEntry
-	var err error
-	if year == "2020" {
-		matches, err = config.getEventMatches2020(vars["event"])
-	} else if year == "2019" {
-		matches, err = config.getEventMatches2019(vars["event"])
-	} else {
-		matches, err = config.getEventMatches2019(vars["event"])
-	}
+	//year := vars["event"][0:4]
+	matches, err := config.getEventMatches(vars["event"])
 	if err != nil {
 		log.Println(err)
 		json.NewEncoder(w).Encode([0]string{})
@@ -169,6 +162,29 @@ func (config *Config) EventYearReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(events)
+}
+
+func (config *Config) TeamYearReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	team, err := vars["team"]
+	if !err {
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	year, err := vars["year"]
+	if !err {
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	log.Println(year, team)
+	matches, e := config.getTeamMatchesYear(team, year)
+	if e != nil {
+		log.Println(e)
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	json.NewEncoder(w).Encode(matches)
 }
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {

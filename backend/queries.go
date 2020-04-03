@@ -4,21 +4,9 @@ import (
 	"context"
 	"sort"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
-func (me *MatchEntry) Diff() (int, error) {
-	if _, ok := me.Alliances["red"]; !ok {
-		return 0, errors.New("No red alliance")
-	}
-	if _, ok := me.Alliances["blue"]; !ok {
-		return 0, errors.New("No blue alliance")
-	}
-	return me.Alliances["red"].Alliance.Score - me.Alliances["blue"].Alliance.Score, nil
-}
-
-func (config *Config) getEventMatches2019(event string) ([]MatchEntry, error) {
+func (config *Config) predictionQuery(query string) (map[string]map[string]PredictionHistory, error) {
 	conn, err := config.conn.Acquire(context.Background())
 	if err != nil {
 		return nil, err
@@ -26,14 +14,40 @@ func (config *Config) getEventMatches2019(event string) ([]MatchEntry, error) {
 	defer conn.Release()
 	rows, err := conn.Query(
 		context.Background(),
-		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phr.prediction as RocketPrediction, phh.prediction as HabPrediction, event.event_type < 7 as official FROM match
-JOIN alliance on (match.key = alliance.match_key)
-JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'eloscore2019'
-LEFT JOIN prediction_history phr on phr."match" = alliance.match_key and phr.model = 'rocket'
-LEFT JOIN prediction_history phh on phh."match" = alliance.match_key and phh.model = 'hab'
-join event on (event.key = match.event_key)
-where match.event_key = '`+event+`'`)
+		query,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	v := make(map[string]map[string]PredictionHistory)
+	for rows.Next() {
+		var match string
+		var model string
+		var pred PredictionHistory
+		rows.Scan(
+			&match,
+			&model,
+			&pred.Prediction,
+		)
+		if _, ok := v[match]; !ok {
+			v[match] = make(map[string]PredictionHistory)
+		}
+		v[match][model] = pred
+	}
+	return v, nil
+}
+
+func (config *Config) matchQuery(query string) ([]MatchEntry, error) {
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+	rows, err := conn.Query(
+		context.Background(),
+		query,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +57,6 @@ where match.event_key = '`+event+`'`)
 		var match Match
 		var alliance Alliance
 		var aTeam AllianceTeam
-		var eloPrediction PredictionHistory
-		var rocketPrediction PredictionHistory
-		var habPrediction PredictionHistory
 		var official bool
 		rows.Scan(
 			&match.Key,
@@ -65,9 +76,7 @@ where match.event_key = '`+event+`'`)
 			&alliance.MatchKey,
 			&aTeam.AllianceId,
 			&aTeam.TeamKey,
-			&eloPrediction.Prediction,
-			&rocketPrediction.Prediction,
-			&habPrediction.Prediction,
+			&aTeam.Position,
 			&official,
 		)
 		if _, ok := matches[match.Key]; !ok {
@@ -84,9 +93,6 @@ where match.event_key = '`+event+`'`)
 			matches[key].Alliances[alliance.Color].Teams,
 			aTeam.TeamKey,
 		)
-		matches[key].Predictions["elo_score"] = &eloPrediction
-		matches[key].Predictions["rocket"] = &rocketPrediction
-		matches[key].Predictions["hab"] = &habPrediction
 	}
 	if rows.Err() != nil {
 		return nil, rows.Err()
@@ -101,165 +107,72 @@ where match.event_key = '`+event+`'`)
 	return list, nil
 }
 
-func (config *Config) getEventMatches2020(event string) ([]MatchEntry, error) {
-	conn, err := config.conn.Acquire(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-	rows, err := conn.Query(
-		context.Background(),
-		`SELECT "match".*, alliance.*, alliance_teams.*, ph.prediction as EloScorePrediction, phe.prediction as Energized, phs.prediction as Shield, event.event_type < 7 as official FROM match
+func (config *Config) getEventMatches(event string) ([]MatchEntry, error) {
+	query := `SELECT "match".*, alliance.*, alliance_teams.*, event.event_type < 7 as official FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-LEFT JOIN prediction_history ph on ph."match" = alliance.match_key and ph.model = 'eloscore2020'
-LEFT JOIN prediction_history phe on phe."match" = alliance.match_key and phe.model = 'shieldeng'
-LEFT JOIN prediction_history phs on phs."match" = alliance.match_key and phs.model = 'shieldop'
 join event on (event.key = match.event_key)
-where match.event_key = '`+event+`'`)
+where match.event_key = '` + event + `'`
+	matches, err := config.matchQuery(query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	matches := make(map[string]MatchEntry)
-	for rows.Next() {
-		var match Match
-		var alliance Alliance
-		var aTeam AllianceTeam
-		var eloPrediction PredictionHistory
-		var energizedPrediction PredictionHistory
-		var shieldPrediction PredictionHistory
-		var official bool
-		rows.Scan(
-			&match.Key,
-			&match.CompLevel,
-			&match.SetNumber,
-			&match.MatchNumber,
-			&match.WinningAlliance,
-			&match.EventKey,
-			&match.Time,
-			&match.ActualTime,
-			&match.PredictedTime,
-			&match.PostResultTime,
-			&match.ScoreBreakdown,
-			&alliance.Key,
-			&alliance.Score,
-			&alliance.Color,
-			&alliance.MatchKey,
-			&aTeam.AllianceId,
-			&aTeam.TeamKey,
-			&eloPrediction.Prediction,
-			&energizedPrediction.Prediction,
-			&shieldPrediction.Prediction,
-			&official,
-		)
-		if _, ok := matches[match.Key]; !ok {
-			dict := make(map[string]*AllianceEntry)
-			preds := make(map[string]*PredictionHistory)
-			matches[match.Key] = MatchEntry{&match, dict, preds, official}
+	preds, err := config.predictionQuery(`
+		select ph.match, ph.model, ph.prediction from prediction_history ph
+		join match on (match.key = ph.match)
+		JOIN alliance on (match.key = alliance.match_key)
+		JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+    where match.event_key = '` + event + `'`)
+	if err != nil {
+		return matches, err
+	}
+	for _, m := range matches {
+		for p_key, p := range preds[m.Match.Key] {
+			m.Predictions[p_key] = &p
 		}
-		key := match.Key
-		if _, ok := matches[key].Alliances[alliance.Color]; !ok {
-			list := make([]string, 0)
-			matches[key].Alliances[alliance.Color] = &AllianceEntry{alliance, list}
+	}
+	return matches, nil
+}
+
+func (config *Config) getTeamMatchesYear(team, year string) ([]MatchEntry, error) {
+	query := `SELECT "match".*, alliance.*, alliance_teams.*, event.event_type < 7 as official FROM match
+JOIN alliance on (match.key = alliance.match_key)
+JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+join event on (event.key = match.event_key)
+where team_key = '` + team + `' and event_key like '` + year + `%'`
+	matches, err := config.matchQuery(query)
+	if err != nil {
+		return nil, err
+	}
+	preds, err := config.predictionQuery(`
+		select ph.match, ph.model, ph.prediction from prediction_history ph
+		join match on (match.key = ph.match)
+		JOIN alliance on (match.key = alliance.match_key)
+		JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
+		WHERE team_key = '` + team + `' and event_key like '` + year + `%'
+		`)
+	if err != nil {
+		return matches, err
+	}
+	for _, m := range matches {
+		for p_key, p := range preds[m.Match.Key] {
+			m.Predictions[p_key] = &p
 		}
-		matches[key].Alliances[alliance.Color].Teams = append(
-			matches[key].Alliances[alliance.Color].Teams,
-			aTeam.TeamKey,
-		)
-		matches[key].Predictions["elo_score"] = &eloPrediction
-		matches[key].Predictions["energized"] = &energizedPrediction
-		matches[key].Predictions["shield"] = &shieldPrediction
 	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	var list []MatchEntry
-	for _, value := range matches {
-		list = append(list, value)
-	}
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].Match.Time < list[j].Match.Time
-	})
-	return list, nil
+	return matches, nil
 }
 
 func (config *Config) getMatches() ([]MatchEntry, error) {
-	conn, err := config.conn.Acquire(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Release()
-	rows, err := conn.Query(
-		context.Background(),
-		`SELECT
+	query := `SELECT
   match.key, match.comp_level, match.set_number, match.match_number, match.winning_alliance, match.event_key, match.time, match.actual_time, match.predicted_time, match.post_result_time, match.score_breakdown,
   alliance.key, alliance.score, alliance.color, alliance.match_key,
-  alliance_teams.alliance_id, alliance_teams.team_key,
+  alliance_teams.alliance_id, alliance_teams.team_key, alliance_teams.position,
   event.event_type < 7 as official
   FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-join event on (event.key = match.event_key)
---where event.event_type < 7`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	matches := make(map[string]MatchEntry)
-	for rows.Next() {
-		var match Match
-		var alliance Alliance
-		var aTeam AllianceTeam
-		var official bool
-		rows.Scan(
-			&match.Key,
-			&match.CompLevel,
-			&match.SetNumber,
-			&match.MatchNumber,
-			&match.WinningAlliance,
-			&match.EventKey,
-			&match.Time,
-			&match.ActualTime,
-			&match.PredictedTime,
-			&match.PostResultTime,
-			&match.ScoreBreakdown,
-			&alliance.Key,
-			&alliance.Score,
-			&alliance.Color,
-			&alliance.MatchKey,
-			&aTeam.AllianceId,
-			&aTeam.TeamKey,
-			&official,
-		)
-		// temp: This takes up too much memory.
-		//match.ScoreBreakdown = nil
-		if _, ok := matches[match.Key]; !ok {
-			dict := make(map[string]*AllianceEntry)
-			preds := make(map[string]*PredictionHistory)
-			matches[match.Key] = MatchEntry{&match, dict, preds, official}
-		}
-		key := match.Key
-		if _, ok := matches[key].Alliances[alliance.Color]; !ok {
-			list := make([]string, 0)
-			matches[key].Alliances[alliance.Color] = &AllianceEntry{alliance, list}
-		}
-		matches[key].Alliances[alliance.Color].Teams = append(
-			matches[key].Alliances[alliance.Color].Teams,
-			aTeam.TeamKey,
-		)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	var list []MatchEntry
-	for _, value := range matches {
-		list = append(list, value)
-	}
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].Match.Time < list[j].Match.Time
-	})
-	return list, nil
+join event on (event.key = match.event_key)`
+	return config.matchQuery(query)
 }
 
 func (config *Config) getEvents(year int) ([]Event, error) {

@@ -1,6 +1,9 @@
 package main
 
-import "strconv"
+import (
+	"errors"
+	"strconv"
+)
 
 // Match represents a single match in both the database and the API.
 type Match struct {
@@ -30,6 +33,7 @@ type Alliance struct {
 type AllianceTeam struct {
 	AllianceId string `db:"alliance_id" json:"alliance_id"`
 	TeamKey    string `db:"team_key" json:"team_key"`
+	Position   int    `db:"position" json:"position"`
 }
 
 //
@@ -58,6 +62,16 @@ func (me MatchEntry) year() int {
 func (m MatchEntry) played() bool {
 	return m.Alliances["blue"].Alliance.Score > 0 &&
 		m.Alliances["red"].Alliance.Score > 0
+}
+
+func (me *MatchEntry) Diff() (int, error) {
+	if _, ok := me.Alliances["red"]; !ok {
+		return 0, errors.New("No red alliance")
+	}
+	if _, ok := me.Alliances["blue"]; !ok {
+		return 0, errors.New("No blue alliance")
+	}
+	return me.Alliances["red"].Alliance.Score - me.Alliances["blue"].Alliance.Score, nil
 }
 
 //
