@@ -133,20 +133,28 @@ where match.event_key = '` + event + `'`
 }
 
 func (config *Config) getTeamMatchesYear(team, year string) ([]MatchEntry, error) {
-	query := `SELECT "match".*, alliance.*, alliance_teams.*, event.event_type < 7 as official FROM match
+	query := `
+SELECT "match".*, alliance.*, alliance_teams.*, event.event_type < 7 as official FROM match
 JOIN alliance on (match.key = alliance.match_key)
 JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
 join event on (event.key = match.event_key)
-where team_key = '` + team + `' and event_key like '` + year + `%'`
+where match.key in
+(select match."key" from alliance_teams at2
+join alliance on (alliance.key = at2.alliance_id)
+join match on (match.key = alliance.match_key)
+where at2.team_key = '` + team + `' and match.key like '` + year + `%')`
 	matches, err := config.matchQuery(query)
 	if err != nil {
 		return nil, err
 	}
 	preds, err := config.predictionQuery(`
-			select ph.match, ph.model, ph.prediction from prediction_history ph
-			join match on (match.key = ph.match)
-			WHERE team_key = '` + team + `' and event_key like '` + year + `%'
-			`)
+select ph.match, ph.model, ph.prediction from prediction_history ph
+join match on (match.key = ph.match)
+where match.key in
+(select match."key" from alliance_teams at2
+join alliance on (alliance.key = at2.alliance_id)
+join match on (match.key = alliance.match_key)
+where at2.team_key = '` + team + `' and match.key like '` + year + `%')`)
 	if err != nil {
 		return matches, err
 	}

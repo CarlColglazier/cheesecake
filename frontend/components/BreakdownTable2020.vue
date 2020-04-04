@@ -31,7 +31,9 @@
 						v-for="team in d.alliances.red.teams"
 						:key="team"
 					>
-						{{ team.substring(3) }}
+						<nuxt-link :to="'/team/' + team">
+							{{ team.substring(3) }}
+						</nuxt-link>
 					</span>
 				</b-td>
 				<b-td>{{ score(d.alliances.red.alliance.score) }}</b-td>
@@ -46,9 +48,11 @@
 				<b-td>
 					<span
 						v-for="team in d.alliances.blue.teams"
-									 :key="team"
+						:key="team"
 					>
-						{{ team.substring(3) }}
+						<nuxt-link :to="'/team/' + team">
+							{{ team.substring(3) }}
+						</nuxt-link>
 					</span>
 				</b-td>
 				<b-td>{{ score(d.alliances.blue.alliance.score) }}</b-td>

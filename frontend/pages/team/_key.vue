@@ -1,6 +1,9 @@
 <template>
 	<content>
 		<h1>{{ $nuxt.$route.params.key }}</h1>
+		<h2>Breakdown</h2>
+		<BreakdownTable2020 v-bind:matches="matches" />
+		<h2>Scoring</h2>
 		<b-table-simple>
 			<b-thead>
 				<b-tr>
@@ -19,10 +22,13 @@
 				</b-tr>
 			</b-tbody>
 		</b-table-simple>
+		
 	</content>
 </template>
 
 <script>
+import BreakdownTable2020 from "~/components/BreakdownTable2020.vue";
+
 function get_color(d) {
 	return Object.keys(d.alliances)[0];
 }
@@ -41,6 +47,7 @@ export default {
 		}
 	},
 	components: {
+		BreakdownTable2020: BreakdownTable2020
 	},
 	methods: {
 		get_color: get_color
