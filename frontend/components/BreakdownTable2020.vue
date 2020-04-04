@@ -35,11 +35,11 @@
 					</span>
 				</b-td>
 				<b-td>{{ score(d.alliances.red.alliance.score) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.elo_score.prediction.red) }})</b-td>
+				<b-td>({{ roundPred(d.predictions['eloscore2020'].prediction.red) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'red', 'shieldEnergizedRankingPoint')) }}</b-td>
-				<b-td>{{ rpPrediction(d, "red", "energized") }}</b-td>
+				<b-td>{{ rpPrediction(d, "red", "shieldeng") }}</b-td>
 				<b-td>{{ rankPoints(rP(d, 'red', 'shieldOperationalRankingPoint')) }}</b-td>
-				<b-td>{{ rpPrediction(d, "red", "shield") }}</b-td>
+				<b-td>{{ rpPrediction(d, "red", "shieldop") }}</b-td>
 			</b-tr>
 			<b-tr>
 				<b-td></b-td>
@@ -52,11 +52,11 @@
 					</span>
 				</b-td>
 				<b-td>{{ score(d.alliances.blue.alliance.score) }}</b-td>
-				<b-td>({{ roundPred(d.predictions.elo_score.prediction.blue) }})</b-td>
+				<b-td>({{ roundPred(d.predictions['eloscore2020'].prediction.blue) }})</b-td>
 				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldEnergizedRankingPoint')) }}</b-td>
-				<b-td>{{ rpPrediction(d, "blue", "energized") }}</b-td>
+				<b-td>{{ rpPrediction(d, "blue", "shieldeng") }}</b-td>
 				<b-td>{{ rankPoints(rP(d, 'blue', 'shieldOperationalRankingPoint')) }}</b-td>
-				<b-td>{{ rpPrediction(d, "blue", "shield") }}</b-td>
+				<b-td>{{ rpPrediction(d, "blue", "shieldop") }}</b-td>
 			</b-tr>
 		</b-tbody>
 	</b-table-simple>
