@@ -21,14 +21,6 @@ func NewBetaModel(a, b float64, breakdownKey string, year int) *BetaModel {
 	return &BetaModel{succ, att, a, b, breakdownKey, year}
 }
 
-/*
-func NewBetaModelFromCache(key string) *BetaModel {
-	succ := make(map[string]int)
-	att := make(map[string]int)
-	return &BetaModel{succ, att, a, b}
-}
-*/
-
 func (pred *BetaModel) SupportsYear(year int) bool {
 	return year == pred.year
 }

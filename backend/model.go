@@ -31,7 +31,6 @@ type Model interface {
 	Predict(MatchEntry) map[string]interface{}
 	AddResult(MatchEntry)
 	CurrentValues() map[string]float64
-	//Dampen()
 	SupportsYear(year int) bool
 }
 
@@ -52,21 +51,6 @@ func NewEloScoreModel(year int, std float64) *EloScoreModel {
 	pred.Dampen()
 	return pred
 }
-
-/*
-func NewEloScoreModelFromCache(scores map[string]interface{}) *EloScoreModel {
-	mapString := make(map[string]float64)
-	for key, value := range scores {
-		strKey := fmt.Sprintf("%v", key)
-		val, ok := value.(float64)
-		if !ok {
-			val = 0.0
-		}
-		mapString[strKey] = val
-	}
-	return &EloScoreModel{mapString, 2019}
-}
-*/
 
 func (pred *EloScoreModel) Dampen() {
 	for k, v := range pred.current {
@@ -111,7 +95,11 @@ func (pred *EloScoreModel) AddResult(me MatchEntry) {
 	oddsMap := pred.Predict(me)
 	odds, _ := oddsMap["red"].(float64)
 	randx := rand.NewSource(372984243789)
-	dist := distuv.Normal{0.0, std, randx}
+	dist := distuv.Normal{
+		Mu:    0.0,
+		Sigma: std,
+		Src:   randx,
+	}
 	diff, err := me.Diff()
 	if err != nil {
 		return

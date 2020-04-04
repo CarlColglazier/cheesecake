@@ -74,7 +74,7 @@ func (me *MatchEntry) Diff() (int, error) {
 	return me.Alliances["red"].Alliance.Score - me.Alliances["blue"].Alliance.Score, nil
 }
 
-//
+// TODO: Split this into a different struct for entries?
 type PredictionHistory struct {
 	//Key        int     `db:"key"`
 	//Match      string          `db:"match" json:"match"`
