@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func (config *Config) predictionQuery(query string) (map[string]map[string]PredictionHistory, error) {
+func (config *Config) predictionQuery(query string) (map[string]map[string]*PredictionHistory, error) {
 	conn, err := config.conn.Acquire(context.Background())
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func (config *Config) predictionQuery(query string) (map[string]map[string]Predi
 		return nil, err
 	}
 	defer rows.Close()
-	v := make(map[string]map[string]PredictionHistory)
+	v := make(map[string]map[string]*PredictionHistory)
 	for rows.Next() {
 		var match string
 		var model string
@@ -31,9 +31,9 @@ func (config *Config) predictionQuery(query string) (map[string]map[string]Predi
 			&pred.Prediction,
 		)
 		if _, ok := v[match]; !ok {
-			v[match] = make(map[string]PredictionHistory)
+			v[match] = make(map[string]*PredictionHistory)
 		}
-		v[match][model] = pred
+		v[match][model] = &pred
 	}
 	return v, nil
 }
@@ -120,15 +120,13 @@ where match.event_key = '` + event + `'`
 	preds, err := config.predictionQuery(`
 		select ph.match, ph.model, ph.prediction from prediction_history ph
 		join match on (match.key = ph.match)
-		JOIN alliance on (match.key = alliance.match_key)
-		JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
     where match.event_key = '` + event + `'`)
 	if err != nil {
 		return matches, err
 	}
 	for _, m := range matches {
 		for p_key, p := range preds[m.Match.Key] {
-			m.Predictions[p_key] = &p
+			m.Predictions[p_key] = p
 		}
 	}
 	return matches, nil
@@ -145,18 +143,17 @@ where team_key = '` + team + `' and event_key like '` + year + `%'`
 		return nil, err
 	}
 	preds, err := config.predictionQuery(`
-		select ph.match, ph.model, ph.prediction from prediction_history ph
-		join match on (match.key = ph.match)
-		JOIN alliance on (match.key = alliance.match_key)
-		JOIN alliance_teams on (alliance_teams.alliance_id = alliance.key)
-		WHERE team_key = '` + team + `' and event_key like '` + year + `%'
-		`)
+			select ph.match, ph.model, ph.prediction from prediction_history ph
+			join match on (match.key = ph.match)
+			WHERE team_key = '` + team + `' and event_key like '` + year + `%'
+			`)
 	if err != nil {
 		return matches, err
 	}
+
 	for _, m := range matches {
 		for p_key, p := range preds[m.Match.Key] {
-			m.Predictions[p_key] = &p
+			m.Predictions[p_key] = p
 		}
 	}
 	return matches, nil

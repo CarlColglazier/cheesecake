@@ -473,7 +473,7 @@ func (config *Config) forecast2020() {
 			eloModel2020.AddResult(match)
 		}
 	}
-	log.Printf("Sending %d predictions to database...", qCount)
+	log.Printf("Sending %d forecasts to database...", qCount)
 	res := conn.SendBatch(context.Background(), batch)
 	for i := 0; i < qCount; i++ {
 		_, err := res.Exec()
