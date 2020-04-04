@@ -30,7 +30,11 @@
 import BreakdownTable2020 from "~/components/BreakdownTable2020.vue";
 
 function get_color(d) {
-	return Object.keys(d.alliances)[0];
+	// Try red.
+	if (d.alliances['red'].teams.includes(this.$route.params.key)) {
+		return "red";
+	}
+	return "blue";
 }
 
 export default {
@@ -39,7 +43,6 @@ export default {
 		try {
 			const dataf = await context.app.fetch(`/team/${context.params.key}/2020`)
 			const data = await dataf.json()
-			console.log(data);
 			return { matches: data }
 		} catch (e) {
 			console.error(e)
