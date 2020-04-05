@@ -1,7 +1,10 @@
 <template>
 	<content>
 		<h1>{{ $nuxt.$route.params.key }}</h1>
-		<ForecastTable v-bind:forecasts="forecasts" />
+		<ForecastTable
+			v-if="forecasts.length > 0"
+			v-bind:forecasts="forecasts"
+		/>
 		<section v-if="matches && matches.length > 0">
 			<p v-if="yearMatch(2020)">Note: this model has still not been fully calibrated for the 2020 game.</p>
 			<h2>Breakdown for {{ $nuxt.$route.params.key }}</h2>
@@ -29,27 +32,32 @@ function yearMatch(year) {
 	return this.$nuxt.$route.params.key.substring(0, 4) == year;
 }
 
+function processForecasts(fore) {
+	let forecasts = {};
+	forecasts["rpleader"] = fore.filter(g => {
+		return g.model === "rpleader";
+	});
+	forecasts["cap"] = fore.filter(g => {
+		return g.model === "cap";
+	});
+	forecasts["meanrp"] = fore.filter(g => {
+		return g.model === "meanrp";
+	});
+	forecasts["stdrp"] = fore.filter(g => {
+		return g.model === "stdrp";
+	});
+	return forecasts;
+}
+
 export default {
 	layout: 'default',
 	async asyncData(context) {
 		try {
 			const dataf = await context.app.fetch(`/matches/${context.params.key}`)
 			const data = await dataf.json()
-			let forecasts = {};
 			const foref = await context.app.fetch(`/forecasts/${context.params.key}`)
 			const fore = await foref.json()
-			forecasts["rpleader"] = fore.filter(g => {
-				return g.model === "rpleader";
-			});
-			forecasts["cap"] = fore.filter(g => {
-				return g.model === "cap";
-			});
-			forecasts["meanrp"] = fore.filter(g => {
-				return g.model === "meanrp";
-			});
-			forecasts["stdrp"] = fore.filter(g => {
-				return g.model === "stdrp";
-			});
+			let forecasts = processForecasts(fore);
 			return { matches: data, forecasts: forecasts }
 		} catch (e) {
 			console.error(e)
