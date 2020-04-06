@@ -22,6 +22,7 @@ func runServer(config *Config) {
 	router.HandleFunc("/matches/{event}", config.GetEventMatchesReq)
 	router.HandleFunc("/events/{year}", config.EventYearReq)
 	router.HandleFunc("/team/{team}/{year}", config.TeamYearReq)
+	router.HandleFunc("/teamevent/{team}/{event}", config.TeamEventReq)
 	router.HandleFunc("/forecasts/{event}", config.getEventForecastsReq)
 	router.HandleFunc("/brier", config.Brier)
 	corsObj := handlers.AllowedOrigins([]string{"*"})
@@ -185,6 +186,28 @@ func (config *Config) TeamYearReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(matches)
+}
+
+func (config *Config) TeamEventReq(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	vars := mux.Vars(r)
+	team, err := vars["team"]
+	if !err {
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	event, err := vars["event"]
+	if !err {
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	breakdown, e := config.getTeamEventBreakdown2020(team, event)
+	if e != nil {
+		log.Println(e)
+		json.NewEncoder(w).Encode([0]Match{})
+		return
+	}
+	json.NewEncoder(w).Encode(breakdown)
 }
 
 func (config *Config) Brier(w http.ResponseWriter, r *http.Request) {

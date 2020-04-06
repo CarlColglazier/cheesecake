@@ -245,3 +245,106 @@ fh.match_key like '`+event+`_%'`)
 	}
 	return forecasts, nil
 }
+
+func (config *Config) getTeamEventBreakdown2020(team, event string) (map[string][]int, error) {
+	query := `
+select score_breakdown->color->'autoCellPoints' as autoCells,
+(case
+	when (score_breakdown->color->format('initLineRobot%s', (position+1)))::text = '"Exited"' 
+	then 5
+	else 0
+end) as init,
+score_breakdown->color->'teleopCellPoints' as teleCells,
+score_breakdown->color->format('endgameRobot%s', (position+1)) as endgame
+from alliance_teams at2 
+join alliance on (alliance."key" = at2.alliance_id )
+join match on (match.key = alliance.match_key )
+where at2.team_key =$1 and event_key =$2
+order by match.actual_time
+`
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+	rows, err := conn.Query(
+		context.Background(),
+		query,
+		team,
+		event,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ret := make(map[string][]int)
+	ret["autoCells"] = make([]int, 0)
+	ret["init"] = make([]int, 0)
+	ret["teleCells"] = make([]int, 0)
+	ret["endgame"] = make([]int, 0)
+	for rows.Next() {
+		var auto, init, tele int
+		var end string
+		rows.Scan(
+			&auto,
+			&init,
+			&tele,
+			&end,
+		)
+		ret["autoCells"] = append(ret["autoCells"], auto)
+		ret["init"] = append(ret["init"], init)
+		ret["tele"] = append(ret["tele"], tele)
+	}
+	return ret, nil
+}
+
+func (config *Config) getEventBreakdown2020(event string) (map[string][]int, error) {
+	query := `
+select score_breakdown->color->'autoCellPoints' as autoCells,
+(case
+	when (score_breakdown->color->format('initLineRobot%s', (position+1)))::text = '"Exited"' 
+	then 5
+	else 0
+end) as init,
+score_breakdown->color->'teleopCellPoints' as teleCells,
+score_breakdown->color->format('endgameRobot%s', (position+1)) as endgame
+from alliance_teams at2 
+join alliance on (alliance."key" = at2.alliance_id )
+join match on (match.key = alliance.match_key )
+where at2.team_key =$1 and event_key =$2
+order by match.actual_time
+`
+	conn, err := config.conn.Acquire(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+	rows, err := conn.Query(
+		context.Background(),
+		query,
+		event,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ret := make(map[string][]int)
+	ret["autoCells"] = make([]int, 0)
+	ret["init"] = make([]int, 0)
+	ret["teleCells"] = make([]int, 0)
+	ret["endgame"] = make([]int, 0)
+	for rows.Next() {
+		var auto, init, tele int
+		var end string
+		rows.Scan(
+			&auto,
+			&init,
+			&tele,
+			&end,
+		)
+		ret["autoCells"] = append(ret["autoCells"], auto)
+		ret["init"] = append(ret["init"], init)
+		ret["tele"] = append(ret["tele"], tele)
+	}
+	return ret, nil
+}
