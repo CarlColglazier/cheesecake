@@ -31,7 +31,7 @@
 						v-for="team in d.alliances.red.teams"
 						:key="team"
 					>
-						<nuxt-link :to="'/team/' + team">
+						<nuxt-link :to="'/team/' + team + '/2020'">
 							{{ team.substring(3) }}
 						</nuxt-link>
 					</span>
@@ -50,7 +50,7 @@
 						v-for="team in d.alliances.blue.teams"
 						:key="team"
 					>
-						<nuxt-link :to="'/team/' + team">
+						<nuxt-link :to="'/team/' + team + '/2020'">
 							{{ team.substring(3) }}
 						</nuxt-link>
 					</span>
