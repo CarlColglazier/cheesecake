@@ -278,10 +278,6 @@ order by match.actual_time
 	}
 	defer rows.Close()
 	ret := make(map[string][]int)
-	ret["autoCells"] = make([]int, 0)
-	ret["init"] = make([]int, 0)
-	ret["teleCells"] = make([]int, 0)
-	ret["endgame"] = make([]int, 0)
 	for rows.Next() {
 		var auto, init, tele int
 		var end string
@@ -293,7 +289,7 @@ order by match.actual_time
 		)
 		ret["autoCells"] = append(ret["autoCells"], auto)
 		ret["init"] = append(ret["init"], init)
-		ret["tele"] = append(ret["tele"], tele)
+		ret["teleCells"] = append(ret["teleCells"], tele)
 	}
 	return ret, nil
 }
@@ -329,10 +325,6 @@ order by match.actual_time
 	}
 	defer rows.Close()
 	ret := make(map[string][]int)
-	ret["autoCells"] = make([]int, 0)
-	ret["init"] = make([]int, 0)
-	ret["teleCells"] = make([]int, 0)
-	ret["endgame"] = make([]int, 0)
 	for rows.Next() {
 		var auto, init, tele int
 		var end string
@@ -344,7 +336,7 @@ order by match.actual_time
 		)
 		ret["autoCells"] = append(ret["autoCells"], auto)
 		ret["init"] = append(ret["init"], init)
-		ret["tele"] = append(ret["tele"], tele)
+		ret["teleCells"] = append(ret["teleCells"], tele)
 	}
 	return ret, nil
 }
