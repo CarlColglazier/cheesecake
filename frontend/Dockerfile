@@ -1,12 +1,8 @@
-FROM node:12-alpine
+FROM node:12.18.3
 
 # create destination directory
 RUN mkdir -p /usr/src/nuxt-app
 WORKDIR /usr/src/nuxt-app
-
-# update and install dependency
-# RUN apk update && apk upgrade
-# RUN apk add git python make g++
 
 # copy the app, note .dockerignore
 COPY . /usr/src/nuxt-app/
