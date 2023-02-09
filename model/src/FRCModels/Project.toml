@@ -1,0 +1,15 @@
+name = "FRCModels"
+uuid = "3b5a88e3-ad93-4d5e-afc4-ce05b25aec3d"
+authors = ["Carl Colglazier <carl@carlcolglazier.com>"]
+version = "0.1.0"
+
+[deps]
+Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
+Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
