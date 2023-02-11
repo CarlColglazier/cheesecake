@@ -1,9 +1,8 @@
-
 import React from 'react';
+import { EventDataType, MatchDataType } from '../types';
 
-function MatchTable({ data }) {
-
-    function prediction_entry(e) {
+const MatchTable: React.FC<EventDataType> = ({ ev, matches, team_sims }) => {
+    function prediction_entry(e: MatchDataType) {
         if ('predictions' in e) {
             const correct = (
                 (e.predictions>0.5 && e.red_score>e.blue_score) ||
@@ -32,11 +31,11 @@ function MatchTable({ data }) {
                 </tr>
             </thead>
             <tbody>
-            {data.map((e, i) => (
+            {matches.map((e, i) => (
                 <tr key={i} className="border">
                     <td className="text-right p-4">{e.match_number}</td>
-                    <td className="text-center p-4">{e.red.map((j, k) => <span key={k} className='p-2'>{j}</span>)}</td>
-                    <td className="text-center p-4">{e.blue.map((j, k) => <span key={k} className='p-2'>{j}</span>)}</td>
+                    <td className="text-center p-4">{e.red.map((j: number[], k: number) => <span key={k} className='p-2'>{j}</span>)}</td>
+                    <td className="text-center p-4">{e.blue.map((j: number[], k: number) => <span key={k} className='p-2'>{j}</span>)}</td>
                     <td className="text-right p-4">{e.red_score}</td>
                     <td className="text-right p-4">{e.blue_score}</td>
                     {prediction_entry(e)}

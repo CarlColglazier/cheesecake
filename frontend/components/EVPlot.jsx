@@ -1,18 +1,7 @@
 import React from 'react';
 import * as Plot from "@observablehq/plot";
 import { useRef, useEffect } from "react";
-
-
-function quartile(points, counts, q) {
-  const all_count = counts.reduce(function (a, b) { return a + b }, 0);
-  let c = 0;
-  for (let i = 0; i < points.length; i++) {
-    c += counts[i];
-    if (c > all_count*q) {
-      return points[i];
-    }
-  }
-}
+import quartile from '../util';
 
 function EVPlot({ data }) {
   const ref = useRef();
@@ -26,13 +15,12 @@ function EVPlot({ data }) {
       }
     )});
 
-  const evmax = Math.max(...proc.map(a => a.points));
-
+  const neworder = data.map(function (e) { 
+    return { "team":e.team, "median":quartile(e.points, e.bcount, 0.5), "qlow":quartile(e.points, e.bcount, 0.1), "qhigh":quartile(e.points, e.bcount, 0.9) }
+  }).sort(function(a, b) { return b.median - a.median });
+  const neworderteams = neworder.map(function(e) { return e.team });
+  const evmax = Math.max(...neworder.map(a => a.qhigh));
   useEffect(() => {
-    const neworder = data.map(function (e) { 
-      return { "team":e.team, "median":quartile(e.points, e.bcount, 0.5), "qlow":quartile(e.points, e.bcount, 0.1), "qhigh":quartile(e.points, e.bcount, 0.9) }
-    }).sort(function(a, b) { return b.median - a.median });
-    const neworderteams = neworder.map(function(e) { return e.team });
     const barChart = Plot.plot({
       marginLeft: 50,
       x: {
@@ -53,7 +41,7 @@ function EVPlot({ data }) {
         Plot.ruleY(neworder, {x1: "qlow", x2: "qhigh", y:"team"}),
         Plot.dot(neworder, {x:"median", y:"team", fill:"#000"})
       ],
-      width: 640,
+      //width: 640,
       height: 15*teams.length,
     });
     ref.current.append(barChart);
