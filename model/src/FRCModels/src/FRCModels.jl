@@ -28,6 +28,7 @@ end
 
 struct Simulator
 	gd::GameData
+	taxi::Dict{Int,PredictionModel}
 	cargoupper::PredictionModel
 	cargolower::PredictionModel
 	cargoautoupper::PredictionModel
@@ -146,14 +147,16 @@ function build_model(gd::GameData, elos)
         :techFoulcount => first => :techFoulCount,
     )
 
+	var_prior = 1
+
     # These take a while
     cargoupper = Threads.@spawn run_model(
         gd,
         count_model_prior(
             hcat(x.teams...),
             x.cargoTeleUpper,
-            [minimum([exp((elos[teamsr(gd)[x]] - 1500) / 100), 10]) for x in 1:length(gd.teams)],
-            5, # var prior
+            [minimum([exp((elos[teamsr(gd)[x]] - 1550) / 100), 10]) for x in 1:length(gd.teams)],
+            var_prior * 10, # var prior
             length(gd.teams)
         ); fast=false
     )
@@ -172,8 +175,8 @@ function build_model(gd::GameData, elos)
         count_model_prior(
             hcat(x.teams...),
             x.cargoAutoUpper,
-            [minimum([0.5 * exp((elos[x] - 1550) / 60), 2.5]) for x in gd.teams],
-            1, # var prior
+            [minimum([0.5 * exp((elos[x] - 1600) / 100), 2.5]) for x in gd.teams],
+            var_prior * 2.5, # var prior
             length(teams(gd))
         ); fast=false
     )
@@ -202,11 +205,36 @@ function build_model(gd::GameData, elos)
         team_climbs[team] = team_climb_model(gd, team)
     end
     #
+	team_taxi = Dict{Int,PredictionModel}()
+	for team in keys(teams(gd))
+		team_taxi[team] = team_taxi_model(gd, team)
+	end
     return Simulator(
-        gd, fetch(cargoupper), fetch(cargolower),
+        gd, team_taxi, fetch(cargoupper), fetch(cargolower),
         fetch(cargoautoupper), fetch(cargoautolower),
         team_climbs, fetch(fouls)
     )
+end
+
+function team_taxi_model(gd::GameData, team::Int)
+	df = gd.df |> x -> x[x.team .== team, :]
+	logger = Logging.NullLogger()
+	if nrow(df) > 0
+		model = taxi(df.taxi)
+		s = Logging.with_logger(logger) do
+			sample(model, NUTS(), 100; progress=false, verbose=false)
+		end
+	else
+		model = taxi([false])
+		s = Logging.with_logger(logger) do
+			sample(model, Prior(), 1000; progress=false)
+		end
+	end
+	modeldf = DataFrame(
+		:team=>team,
+		:taxi=>mean(collect(first(get(s, :b))))
+	)
+	return PredictionModel(model, s, modeldf)
 end
 
 
@@ -243,8 +271,14 @@ end
 
 function simulate_counts(gd::GameData, pm::PredictionModel, team, n)
 	sp = first(get(pm.chain, :off))[teams(gd)[team]]
-	rd = truncated(Normal(mean(sp), std(sp)); lower=0)
-	return rand.(Poisson.(rand(rd, n)))
+	#rd = truncated(Normal(mean(sp), std(sp)); lower=0)
+	#return rand.(Poisson.(rand(rd, n)))
+	r = rand(sp, n)
+	return rand.(Poisson.(r))
+end
+
+function simulate_taxi(s::Chains, n::Int)
+	return rand.(Bernoulli.(rand(first(get(s, :b)), n)))
 end
 
 function simulate_climb_points(s::Chains, n::Int)
@@ -274,12 +308,43 @@ function simulate_total_cargo(sim::Simulator, teams::Vector{Int}, n::Int)
 	)
 end
 
+#=
 function simulate_team(sim::Simulator, team, n)
 	return (4*simulate_counts(sim.gd, sim.cargoautoupper, team, n) .+
 			2*simulate_counts(sim.gd, sim.cargoautolower, team, n) .+
 			2*simulate_counts(sim.gd, sim.cargoupper, team, n) .+
 			simulate_counts(sim.gd, sim.cargolower, team, n) .+
 			simulate_climb_points(sim, team, n)
+	)
+end
+=#
+
+function simulate_team_tuple(sim::Simulator, team, n)
+	cargoautoupper = simulate_counts(sim.gd, sim.cargoautoupper, team, n)
+	cargoautolower = simulate_counts(sim.gd, sim.cargoautolower, team, n)
+	cargoupper = simulate_counts(sim.gd, sim.cargoupper, team, n)
+	cargolower = simulate_counts(sim.gd, sim.cargolower, team, n)
+	climb = simulate_climb_points(sim, team, n)
+	taxi = simulate_taxi(sim.taxi[team].chain, n)
+	return (
+		cargoautoupper=cargoautoupper,
+		cargoautolower=cargoautolower,
+		cargoupper=cargoupper,
+		cargolower=cargolower,
+		climb=climb,
+		taxi=taxi
+	)
+end
+
+function simulate_team(sim::Simulator, team, n)
+	t = simulate_team_tuple(sim, team, n)
+	return (
+		4*t.cargoautoupper .+
+		2*t.cargoautolower .+
+		2*t.cargoupper .+
+		t.cargolower .+
+		t.climb .+
+		4*t.taxi
 	)
 end
 
