@@ -28,7 +28,7 @@ for event in Set(df_all.event)
 	tagsave(datadir("simulations", "$(event).jld2"), struct2dict(x))
 end
 
-function ev_count_df(sim::FRCModels.Simulator)
+function ev_count_df(sim::FRCModels.Simulator22)
 	return FRCModels.sim_evs(sim) |> 
 		x -> DataFrame(:team=>x.teams, :points => x.sims) |>
 		x -> flatten(x, :points) |>

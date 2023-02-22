@@ -59,6 +59,13 @@ export async function getStaticPaths() {
       </>
     )
   }
+  if (slug.startsWith('2022')) {
+    const evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+    const matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+  } else {
+    const evtable = <div></div>
+    const matchtable = <div></div>
+  }
   return (
     <>
       <p>This is the page for the event.</p>
@@ -74,12 +81,12 @@ export async function getStaticPaths() {
                 <EVPlot data={data.ev} />
               </div>
               <div className='col-span-2 lg:col-span-1'>
-                <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+                evtable
               </div>
             </div>
           </Tab.Panel>
           <Tab.Panel>
-            <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+            matchtable
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>
