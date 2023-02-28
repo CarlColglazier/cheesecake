@@ -3,9 +3,11 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import EVPlot from '../../components/EVPlot';
 import MatchTable from '../../components/MatchTable';
+import MatchTable2023 from '../../components/MatchTable2023';
 import {EventDataType} from '../../types';
 import { Tab } from '@headlessui/react';
 import EVTable from '../../components/EVTable';
+import EVTable2023 from '../../components/EVTable2023';
 import useSWR, { SWRConfig, Fetcher } from 'swr';
 
 
@@ -60,11 +62,11 @@ export async function getStaticPaths() {
     )
   }
   if (slug.startsWith('2022')) {
-    const evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
-    const matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+    var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+    var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
   } else {
-    const evtable = <div></div>
-    const matchtable = <div></div>
+    var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+    var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} />
   }
   return (
     <>
@@ -81,12 +83,12 @@ export async function getStaticPaths() {
                 <EVPlot data={data.ev} />
               </div>
               <div className='col-span-2 lg:col-span-1'>
-                evtable
+                {evtable}
               </div>
             </div>
           </Tab.Panel>
           <Tab.Panel>
-            matchtable
+            {matchtable}
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>

@@ -413,7 +413,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.10+0"
 
 [[deps.FRCModels]]
-deps = ["Arrow", "CSV", "DataFrames", "LazyArrays", "LinearAlgebra", "Logging", "OrderedCollections", "ReverseDiff", "Turing"]
+deps = ["Arrow", "CSV", "DataFrames", "LazyArrays", "LinearAlgebra", "Logging", "OrderedCollections", "Random", "ReverseDiff", "Turing"]
 path = "src/FRCModels"
 uuid = "3b5a88e3-ad93-4d5e-afc4-ce05b25aec3d"
 version = "0.1.0"

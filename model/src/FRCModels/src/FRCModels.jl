@@ -24,6 +24,7 @@ end
 function bymatch(df::DataFrame)
 	combine(
         filter(y -> length(y.key) == 6 && sum([y.score[1], y.score[6]]) != 1, groupby(df, [:key])),
+		:key=>first=>:key,
         :team => (y -> [y[1:3]]) => :red,
         :team => (y -> [y[4:6]]) => :blue,
         :score => (y -> y[1]) => :red_score,
@@ -71,7 +72,7 @@ function run_model(gd::GameData, model; fast=false)
 		samples = 1000
 	else
 		sampler = NUTS()
-		samples = 100
+		samples = 250
 	end
 	logger = Logging.NullLogger()
 	s = Logging.with_logger(logger) do

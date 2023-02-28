@@ -1,73 +1,114 @@
+using LazyArrays
+using Random
+
+
 mutable struct Simulator23
 	gd::GameData
 	automobile::Dict{Int,PredictionModel}
-	autocharge::Dict{Int,PredictionModel}
-	autoConeT::PredictionModel
-	autoConeM::PredictionModel
-	autoConeB::PredictionModel
-	teleConeT::PredictionModel
-	teleConeM::PredictionModel
-	teleConeB::PredictionModel
-	autoCubeT::PredictionModel
-	autoCubeM::PredictionModel
-	autoCubeB::PredictionModel
-	teleCubeT::PredictionModel
-	teleCubeM::PredictionModel
-	teleCubeB::PredictionModel
+	autocharge::PredictionModel
+	autoT::PredictionModel
+	autoM::PredictionModel
+	autoB::PredictionModel
+	teleT::PredictionModel
+	teleM::PredictionModel
+	teleB::PredictionModel
 	endgame::Dict{Int,PredictionModel}
 end
+
+@model function piece_count_model(t::Matrix{Int}, s::Vector{Int}, N::Int)
+	int ~ Normal(0.0,1)
+	ooff ~ Exponential(1)
+	off ~ filldist(Normal(0,ooff), N)
+	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
+	for i in 1:length(s)
+		s[i] ~ BinomialLogit(9, lo[i] .+ int)
+	end
+	return s
+end
+
+@model function piece_count_model_tele(t::Matrix{Int}, s::Vector{Int}, a::Vector{Int}, N::Int)
+	int ~ Normal(0.0,1)
+	ooff ~ Exponential(1)
+	off ~ filldist(Normal(0,ooff), N)
+	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
+	s .~ BinomialLogit.(9 .- a, lo .+ int)
+	return s
+end
+
+@model function endgame_model23(ye::Vector, yd::Vector, yp::Vector)
+	e ~ Beta(1,1)
+	d ~ Beta(1,1)
+	p ~ Beta(1,1)
+	ye .~ Bernoulli.(e)
+	yd .~ Bernoulli.(d)
+	yp .~ Bernoulli.(p)
+	return e, d, p
+end
+
+egda = Dict("Engaged"=>2, "Docked"=>1, "None"=>0)
+egda_points = Dict(12=>2, 8=>1, 0=>0)
+
+function count_links(v::AbstractVector)
+	count = 0
+	start = 1
+	for i in eachindex(v)
+		if v[i] == 0
+			count += (i - start) ÷ 3
+			start = i+1
+		end
+	end
+	if length(v) >= 9 && v[9] == 1
+		count += (10 - start) ÷ 3
+	end
+	return count
+end
+
+function simulate_links(n::Int)
+	g = Random.randperm(9) .<= n
+	return count_links(g)
+end
+
 
 function build_model23(gd::GameData)
     x = combine(
         filter(x -> length(x.key) == 3, groupby(gd.df, [:event, :key, :alliance,])),
         :team => (x -> [[teams(gd)[y] for y in x]]) => :teams,
-		:auto_count_coneT => first => :auto_count_coneT,
-		:auto_count_coneM => first => :auto_count_coneM,
-		:auto_count_coneB => first => :auto_count_coneB,
-		:teleop_count_coneT => first => :tele_count_coneT,
-		:teleop_count_coneM => first => :tele_count_coneM,
-		:teleop_count_coneB => first => :tele_count_coneB,
-		:auto_count_cubeT => first => :auto_count_cubeT,
-		:auto_count_cubeM => first => :auto_count_cubeM,
-		:auto_count_cubeB => first => :auto_count_cubeB,
-		:teleop_count_cubeT => first => :tele_count_cubeT,
-		:teleop_count_cubeM => first => :tele_count_cubeM,
-		:teleop_count_cubeB => first => :tele_count_cubeB,
+		:auto_countT => first => :auto_countT,
+		:auto_countM => first => :auto_countM,
+		:auto_countB => first => :auto_countB,
+		:teleop_countT => first => :tele_countT,
+		:teleop_countM => first => :tele_countM,
+		:teleop_countB => first => :tele_countB,
     )
+
+	team_matrix = reshape(gd.df.team, size(gd.df,1) ÷ 3, 3)
 
     team_auto_mobile = Dict{Int,PredictionModel}()
 	for team in keys(teams(gd))
 		team_auto_mobile[team] = team_auto_mobile_model(gd, team)
 	end
 
-	team_auto_charge = Dict{Int,PredictionModel}()
-	for team in keys(teams(gd))
-		team_auto_charge[team] = team_auto_charge_model23(gd, team)
-	end
+	team_auto_charge = team_auto_charge_model23(gd, team_matrix, length(gd.teams))
 
 	endgame = Dict{Int,PredictionModel}()
     for team in keys(teams(gd))
         endgame[team] = team_endgame_model23(gd, team)
     end
 
-	auto_coneT = run_model(gd, count_model(hcat(x.teams...), x.auto_count_coneT, length(gd.teams)))
-	auto_coneM = run_model(gd, count_model(hcat(x.teams...), x.auto_count_coneM, length(gd.teams)))
-	auto_coneB = run_model(gd, count_model(hcat(x.teams...), x.auto_count_coneB, length(gd.teams)))
-	tele_coneT = run_model(gd, count_model(hcat(x.teams...), x.tele_count_coneT, length(gd.teams)))
-	tele_coneM = run_model(gd, count_model(hcat(x.teams...), x.tele_count_coneM, length(gd.teams)))
-	tele_coneB = run_model(gd, count_model(hcat(x.teams...), x.tele_count_coneB, length(gd.teams)))
-	auto_cubeT = run_model(gd, count_model(hcat(x.teams...), x.auto_count_cubeT, length(gd.teams)))
-	auto_cubeM = run_model(gd, count_model(hcat(x.teams...), x.auto_count_cubeM, length(gd.teams)))
-	auto_cubeB = run_model(gd, count_model(hcat(x.teams...), x.auto_count_cubeB, length(gd.teams)))
-	tele_cubeT = run_model(gd, count_model(hcat(x.teams...), x.tele_count_cubeT, length(gd.teams)))
-	tele_cubeM = run_model(gd, count_model(hcat(x.teams...), x.tele_count_cubeM, length(gd.teams)))
-	tele_cubeB = run_model(gd, count_model(hcat(x.teams...), x.tele_count_cubeB, length(gd.teams)))
+	autoT = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countT, length(gd.teams)))
+	autoM = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countM, length(gd.teams)))
+	autoB = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countB, length(gd.teams)))
+	#teleT = run_model(gd, piece_count_model_tele(hcat(x.teams...), x.tele_countT .- x.auto_countT, x.auto_countT, length(gd.teams)))
+	#teleM = run_model(gd, piece_count_model_tele(hcat(x.teams...), x.tele_countM .- x.auto_countM, x.auto_countM, length(gd.teams)))
+	#teleB = run_model(gd, piece_count_model_tele(hcat(x.teams...), x.tele_countB .- x.auto_countB, x.auto_countB, length(gd.teams)))
+	teleT = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countT, length(gd.teams)))
+	teleM = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countM, length(gd.teams)))
+	teleB = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countB, length(gd.teams)))
+
     return Simulator23(
         gd, team_auto_mobile, team_auto_charge,
-		auto_coneT, auto_coneM, auto_coneB,
-		tele_coneT, tele_coneM, tele_coneB,
-		auto_cubeT, auto_cubeM, auto_cubeB,
-		tele_cubeT, tele_cubeM, tele_cubeB,
+		autoT, autoM, autoB,
+		teleT, teleM, teleB,
 		endgame
     )
 end
@@ -84,7 +125,7 @@ function team_auto_mobile_model(gd::GameData, team::Int)
 	if nrow(df) > 0
 		model = auto_mobility(df.mobility)
 		s = Logging.with_logger(logger) do
-			sample(model, NUTS(), 100; progress=false, verbose=false)
+			sample(model, NUTS(), 250; progress=false, verbose=false)
 		end
 	else
 		model = auto_mobility([false])
@@ -104,79 +145,103 @@ function simulate_auto_mobile(s::Chains, n::Int)
 	return rand.(Bernoulli.(rand(first(get(s, :b)), n)))
 end
 
-# TODO: This is almost certainly better with logit or similar.
-@model function auto_charge(ye::Vector{Bool}, yd::Vector{Bool})
-	e ~ Beta(1,1)
-	d ~ Beta(1,1)
-	ye .~ Bernoulli.(e)
-	yd .~ Bernoulli.(d)
+@model function auto_charge(ye::Vector{Bool}, yd::Vector{Bool}, teams::Matrix, N::Int)
+	e ~ filldist(Normal(0,1.0), N)
+	eint ~ Normal(0,1)
+	d ~ filldist(Normal(0,1.0), N)
+	dint ~ Normal(0,1)
+	#sum_e ~ Normal(0, 0.00001 * N) # sum to zero
+	#sum_d ~ Normal(0, 0.00001 * N)
+	le = e[teams[:,1]] + e[teams[:,2]] + e[teams[:,3]]
+	ld = d[teams[:,1]] + d[teams[:,2]] + d[teams[:,3]]
+	#sum_e = sum(e)
+	#sum_d = sum(d)
+	ye .~ BernoulliLogit.(le .+ eint)
+	yd .~ BernoulliLogit.(ld .+ dint)
 end
 
-egda = Dict("Engaged"=>2, "Docked"=>1, "None"=>0)
-function team_auto_charge_model23(gd::GameData, team::Int)
-	df = gd.df |> x -> x[x.team .== team, :]
+function team_auto_charge_model23(gd::GameData, t::Matrix, team_n::Int)
+	df = gd.df #|> x -> x[x.team .== team, :]
 	logger = Logging.NullLogger()
+	charge_points = gd.df.auto_charge_points[begin:3:end]
 	if nrow(df) > 0
 		model = auto_charge(
-			[egda[y] >= 2 for y in df.auto_charge],
-			[egda[y] >= 1 for y in df.auto_charge],
+			[y >= 12 for y in charge_points],
+			[y >= 8 for y in charge_points],
+			[teams(gd)[x] for x in t], # need to have indices here.
+			team_n
 		)
 		
 		s = Logging.with_logger(logger) do
-			sample(model, NUTS(), 100; progress=false, verbose=false);
+			sample(model, NUTS(), 250; progress=false, verbose=false);
 		end
 	else
-		model = auto_charge([true],[true])
+		model = auto_charge([true, true],[true, true], [1 2 3; 4 5 6], 6)
+		#model = auto_charge([true, true],[true, true])
 		s = Logging.with_logger(logger) do
 			sample(model, Prior(), 1000; progress=false)
 		end
 	end
+	
 	auchargedf = DataFrame(
-		:team=>team,
-		:engaged=>mean(collect(first(get(s, :e)))),
-		:docked=>mean(collect(first(get(s, :d)))),
+		:team=>collect(gd.teams),
+		:engaged=>mean.(collect(first(get(s, :e)))),
+		:docked=>mean.(collect(first(get(s, :d)))),
 	)
 	return PredictionModel(model, s, auchargedf)
 end
 
-function simulate_auto_charge_points(s::Chains, n::Int)
-	levels = Dict(:e=>12, :d=>8)
-	v = zeros(Int, 2, n)
-	for (i, l) in enumerate([:e, :d])
-		v[i,:] = levels[l] * rand.(Bernoulli.(rand(first(get(s, l)), n)))
+function simulate_auto_charge_points(sim::Simulator23, n::Int)
+	chain = sim.autocharge.chain
+	eint = first(get(chain, :eint))
+	dint = first(get(chain, :dint))
+	r_eint = rand(eint, n)
+	r_dint = rand(dint, n)
+	return max.(12 * rand.(BernoulliLogit.(r_eint)), 8 * rand.(BernoulliLogit.(r_dint)))
+end
+
+function simulate_auto_charge_points(sim::Simulator23, teamsv::Vector{Int}, n::Int)
+	chain = sim.autocharge.chain
+	eint = first(get(chain, :eint))
+	dint = first(get(chain, :dint))
+	r_eint = rand(eint, n)
+	r_dint = rand(dint, n)
+	r_e = []
+	r_d = []
+	for team in teamsv
+		e = first(get(chain, :e))[teams(sim.gd)[team]]
+		d = first(get(chain, :d))[teams(sim.gd)[team]]
+		push!(r_e, rand(e, n))
+		push!(r_d, rand(d, n))
 	end
-	return maximum(v, dims=1)[1, :]
+	return max.(12 * rand.(BernoulliLogit.(sum(r_e) .+ r_eint)), 8 * rand.(BernoulliLogit.(sum(r_d) .+ r_dint)))
 end
 
 function simulate_auto_charge_points(sim::Simulator23, team::Int, n::Int)
-	chain = sim.endgame[team].chain
-	return simulate_endgame_points(chain, n)
+	return simulate_auto_charge_points(sim, [team], n)
 end
-
-@model function endgame_model23(ye::Vector, yd::Vector, yp::Vector)
-	e ~ Beta(1,1)
-	d ~ Beta(1,1)
-	p ~ Beta(1,1)
-	ye .~ Bernoulli.(e)
-	yd .~ Bernoulli.(d)
-	yp .~ Bernoulli.(p)
-	return e, d, p
-end
-
 
 egd = Dict("Engaged"=>4, "Docked"=>3, "Park"=>2, "None"=>1)
+function endgame_level(r)
+	if r.endGameBridgeState == "Level" && r.endgame_charge == "Docked"
+		return 4
+	else
+		return egd[r.endgame_charge]
+	end
+end
+
 function team_endgame_model23(gd::GameData, team::Int)
 	df = gd.df |> x -> x[x.team .== team, :]
 	logger = Logging.NullLogger()
 	if nrow(df) > 0
 		model = endgame_model23(
-			[egd[y] >= 4 for y in df.endgame_charge],
-			[egd[y] >= 3 for y in df.endgame_charge],
-			[egd[y] >= 2 for y in df.endgame_charge]
+			[endgame_level(r) >= 4 for r in eachrow(df)],
+			[endgame_level(r) >= 3 for r in eachrow(df)],
+			[endgame_level(r) >= 2 for r in eachrow(df)],
 		)
 		
 		s = Logging.with_logger(logger) do
-			sample(model, NUTS(), 100; progress=false, verbose=false);
+			sample(model, NUTS(), 250; progress=false, verbose=false);
 		end
 	else
 		model = endgame_model23([true],[true],[true])
@@ -207,58 +272,144 @@ function simulate_endgame_points(sim::Simulator23, team::Int, n::Int)
 	return simulate_endgame_points(chain, n)
 end
 
-function simulate_team_tuple(sim::Simulator23, team, n)
-	auto_mobile = simulate_auto_mobile(sim.automobile[team].chain, n)
-	auto_charge = simulate_auto_charge_points(sim, team, n)
-	endgame = simulate_endgame_points(sim, team, n)
+function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int)
+	int = rand(first(get(pm.chain, :int)), n)
+	return rand.(BinomialLogit.(9, int))
+end
+
+function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int)
+	int = rand(first(get(pm.chain, :int)), n)
+	r = []
+	for team in teamsv
+		sp = first(get(pm.chain, :off))[teams(gd)[team]]
+		push!(r, rand(sp, n))
+	end
+	return rand.(BinomialLogit.(Ref(9), sum(r) .+ int))
+end
+
+function simulate_piece_counts_tele(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, auto_counts::Vector{Int}, n::Int)
+	int = rand(first(get(pm.chain, :int)), n)
+	r = []
+	for team in teamsv
+		sp = first(get(pm.chain, :off))[teams(gd)[team]]
+		push!(r, rand(sp, n))
+	end
+	return rand.(BinomialLogit.(9 .- auto_counts, int .+ sum(r)))
+end
+
+function simulate_piece_counts_tele(pm::PredictionModel, auto_counts::Vector{Int}, n::Int)
+	int = rand(first(get(pm.chain, :int)), n)
+	return rand.(BinomialLogit.(9 .- auto_counts, int))
+end
+
+
+function simulate_teams_tuple(sim::Simulator23, teamsv::Vector{Int}, n)
+	#auto_mobile = 
+	#endgame = simulate_endgame_points(sim, team, n)
+	auto_charge=simulate_auto_charge_points(sim, teamsv, n)
+	auto_countT=simulate_piece_counts(sim.gd, sim.autoT, teamsv, n)
+	auto_countM=simulate_piece_counts(sim.gd, sim.autoM, teamsv, n)
+	auto_countB=simulate_piece_counts(sim.gd, sim.autoB, teamsv, n)
+	tele_countT=simulate_piece_counts_tele(sim.gd, sim.teleT, teamsv, auto_countT, n)
+	tele_countM=simulate_piece_counts_tele(sim.gd, sim.teleM, teamsv, auto_countM, n)
+	tele_countB=simulate_piece_counts_tele(sim.gd, sim.teleB, teamsv, auto_countB, n)
+	link_count = simulate_links.(auto_countT .+ tele_countT) .+ simulate_links.(auto_countM .+ tele_countM) .+ simulate_links.(auto_countB .+ tele_countB)
+	endgame=[simulate_endgame_points(sim, team, n) for team in teamsv]
+	eg_sim=deepcopy(endgame)
+	for _ in 1:3-length(teamsv)
+		push!(eg_sim, rand(collect(Iterators.flatten([FRCModels.simulate_endgame_points(sim, team, n) for team in sim.gd.teams])), n))
+	end
+	activation_scores=auto_charge .+ sum(map.(x->x>2 ? x : 0, eg_sim))
+	
+	activation = activation_scores .>=26
+	sustainability=link_count.>=rand([4,4,5],n)
 	return (
-		auto_mobile=auto_mobile,
+		auto_mobile=sum([simulate_auto_mobile(sim.automobile[team].chain, n) for team in teamsv]),
 		auto_charge=auto_charge,
-		auto_count_coneT=simulate_counts(sim.gd, sim.autoConeT, team, n),
-		auto_count_coneM=simulate_counts(sim.gd, sim.autoConeM, team, n),
-		auto_count_coneB=simulate_counts(sim.gd, sim.autoConeB, team, n),
-		tele_count_coneT=simulate_counts(sim.gd, sim.teleConeT, team, n),
-		tele_count_coneM=simulate_counts(sim.gd, sim.teleConeM, team, n),
-		tele_count_coneB=simulate_counts(sim.gd, sim.teleConeB, team, n),
-		auto_count_cubeT=simulate_counts(sim.gd, sim.autoCubeT, team, n),
-		auto_count_cubeM=simulate_counts(sim.gd, sim.autoCubeM, team, n),
-		auto_count_cubeB=simulate_counts(sim.gd, sim.autoCubeB, team, n),
-		tele_count_cubeT=simulate_counts(sim.gd, sim.teleCubeT, team, n),
-		tele_count_cubeM=simulate_counts(sim.gd, sim.teleCubeM, team, n),
-		tele_count_cubeB=simulate_counts(sim.gd, sim.teleCubeB, team, n),
-		endgame=endgame,
-		other=0
+		auto_countT=auto_countT,
+		auto_countM=auto_countM,
+		auto_countB=auto_countB,
+		tele_countT=tele_countT,
+		tele_countM=tele_countM,
+		tele_countB=tele_countB,
+		link_count=link_count,
+		endgame=sum(endgame),
+		activation_scores=activation_scores,
+		activation=activation,
+		sustainability=sustainability
 	)
 end
 
+function simulate_team_tuple(sim::Simulator23, team::Int, n)
+	return simulate_teams_tuple(sim, [team], n)
+end
+
 function simulate_team(sim::Simulator23, team, n)
-	t = simulate_team_tuple(sim, team, n)
+	t = simulate_team_tuple(sim, team, n; ev=ev)
 	return (
 		3*t.auto_mobile .+
 		t.auto_charge .+
-		6*t.auto_count_coneT .+
-		4*t.auto_count_coneM .+
-		3*t.auto_count_coneB .+
-		5*t.tele_count_coneT .+
-		3*t.tele_count_coneM .+
-		2*t.tele_count_coneB .+
-		6*t.auto_count_cubeT .+
-		4*t.auto_count_cubeM .+
-		3*t.auto_count_cubeB .+
-		5*t.tele_count_cubeT .+
-		3*t.tele_count_cubeM .+
-		2*t.tele_count_cubeB .+
+		6*t.auto_countT .+
+		4*t.auto_countM .+
+		3*t.auto_countB .+
+		5*t.tele_countT .+
+		3*t.tele_countM .+
+		2*t.tele_countB .+
 		t.endgame
 	)
 end
 
 function ev_team(sim::Simulator23, team::Int, n::Int)
-	return simulate_team(sim, team, n)
+	t = simulate_team_tuple(sim, team, n)
+
+	autoT=simulate_piece_counts(sim.gd, sim.autoT, n)
+	autoM=simulate_piece_counts(sim.gd, sim.autoM, n)
+	autoB=simulate_piece_counts(sim.gd, sim.autoB, n) 
+	teleT=simulate_piece_counts_tele(sim.teleT, autoT, n)
+	teleM=simulate_piece_counts_tele(sim.teleM, autoM, n)
+	teleB=simulate_piece_counts_tele(sim.teleB, autoT, n)
+	link_count = simulate_links.(autoT .+ teleT) .+ simulate_links.(autoM .+ teleM) .+ simulate_links.(autoB .+ teleB)
+	endgame=rand(collect(Iterators.flatten([FRCModels.simulate_endgame_points(sim, team, n) for team in sim.gd.teams])), n)
+	return (
+		t.auto_charge .- simulate_auto_charge_points(sim, n) .+
+		6*t.auto_countT .- 6*autoT .+
+		4*t.auto_countM .- 4*autoM .+
+		3*t.auto_countB .- 3*autoB.+
+		5*t.tele_countT .- 5*teleT .+
+		3*t.tele_countM .- 3*teleM .+
+		2*t.tele_countB .- 2*teleB .+
+		# TODO: WAR
+		5*t.link_count .- 5*link_count .+
+		t.endgame .- endgame
+	)
 end
 
-function simulate_teams(sim::Simulator23, teams::Vector{Int}, n)
-	return sum(
-		[simulate_team(sim, x, n) for x in teams]
+function simulate_teams(sim::Simulator23, teamsv::Vector{Int}, n)
+	t = simulate_teams_tuple(sim, teamsv, n)
+	return (
+		3*t.auto_mobile .+
+		t.auto_charge .+
+		6*t.auto_countT .+
+		4*t.auto_countM .+
+		3*t.auto_countB .+
+		5*t.tele_countT .+
+		3*t.tele_countM .+
+		2*t.tele_countB .+
+		t.endgame
+	)
+end
+
+function simulate_teams(t::NamedTuple)
+	return (
+		3*t.auto_mobile .+
+		t.auto_charge .+
+		6*t.auto_countT .+
+		4*t.auto_countM .+
+		3*t.auto_countB .+
+		5*t.tele_countT .+
+		3*t.tele_countM .+
+		2*t.tele_countB .+
+		t.endgame
 	)
 end
 
@@ -277,4 +428,19 @@ function run_event_once23(df, key)
 	gd = GameData(gddf, teams)
 	sim = build_model23(gd)
 	return sim
+end
+
+function simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+	bluesim = simulate_teams_tuple(sim, blue, n) #.+ 4*simulate_count_teams(sim.gd, sim.fouls, red, n)
+	redsim = simulate_teams_tuple(sim, red, n) #.+ 4*simulate_count_teams(sim.gd, sim.fouls, blue, n)
+	return bluesim, redsim
+end
+
+function win_probabilities(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+	bluesim, redsim = simulate_match(sim, blue, red; n=n)
+	return [
+		sum(simulate_teams(bluesim) .> simulate_teams(redsim)) / n,
+		sum(simulate_teams(bluesim) .== simulate_teams(redsim)) / n,
+		sum(simulate_teams(bluesim) .< simulate_teams(redsim)) / n,
+	]
 end

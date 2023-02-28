@@ -68,41 +68,36 @@ def proc_match(m):
 				m['winning_alliance'],
 				b[f"mobilityRobot{i+1}"] == 'Yes',
 				b[f"autoChargeStationRobot{i+1}"],
-				auto_counts_cone['T'],
-				auto_counts_cone['M'],
-				auto_counts_cone['B'],
-				teleop_counts_cone['T'],
-				teleop_counts_cone['M'],
-				teleop_counts_cone['B'],
-				auto_counts_cube['T'],
-				auto_counts_cube['M'],
-				auto_counts_cube['B'],
-				teleop_counts_cube['T'],
-				teleop_counts_cube['M'],
-				teleop_counts_cube['B'],
-				b[f"endGameChargeStationRobot{i+1}"]
+				b["autoChargeStationPoints"],
+				auto_counts_cone['T'] + auto_counts_cube['T'],
+				auto_counts_cone['M'] + auto_counts_cube['M'],
+				auto_counts_cone['B'] + auto_counts_cube['B'],
+				teleop_counts_cone['T'] + teleop_counts_cube['T'],
+				teleop_counts_cone['M'] + teleop_counts_cube['M'],
+				teleop_counts_cone['B'] + teleop_counts_cube['B'],
+				b[f"endGameChargeStationRobot{i+1}"],
+				b["endGameBridgeState"]
 			]
 			g.append(r)
 	return g
 
 
-e = get_event("2023week0")
-matches = get_matches(e)
+#e = get_event("2023isde1")
+#matches = get_matches(e)
 #print(m)
 
-#matches = []
-#for event in get_all_events_year(2023):
-#	matches += get_matches(event)
+matches = []
+for event_key in ["2023week0", "2023isde1"]:#get_all_events_year(2023):
+	event = get_event(event_key)
+	matches += get_matches(event)
 
 data = list(itertools.chain.from_iterable(map(proc_match, matches)))
 df = pd.DataFrame(data, columns=[
 	'event', 'week', 'event_type', 'key', 'alliance', 'comp_level',
 	'match_number', 'time', 'team', 'score', 'winner',
-	'mobility', 'auto_charge', 
-	'auto_count_coneT', 'auto_count_coneM', 'auto_count_coneB',
-	'teleop_count_coneT', 'teleop_count_coneM', 'teleop_count_coneB',
-	'auto_count_cubeT', 'auto_count_cubeM', 'auto_count_cubeB',
-	'teleop_count_cubeT', 'teleop_count_cubeM', 'teleop_count_cubeB',
-	'endgame_charge'
+	'mobility', 'auto_charge', 'auto_charge_points',
+	'auto_countT', 'auto_countM', 'auto_countB',
+	'teleop_countT', 'teleop_countM', 'teleop_countB',
+	'endgame_charge', 'endGameBridgeState'
 ])
 df.to_feather("../data/raw/frc2023.feather")

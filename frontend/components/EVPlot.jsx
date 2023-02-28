@@ -20,12 +20,13 @@ function EVPlot({ data }) {
   }).sort(function(a, b) { return b.median - a.median });
   const neworderteams = neworder.map(function(e) { return e.team });
   const evmax = Math.max(...neworder.map(a => a.qhigh));
+  const evmin = Math.min(Math.min(...neworder.map(a => a.qlow)), 0.0);
   useEffect(() => {
     const barChart = Plot.plot({
       marginLeft: 50,
       x: {
         axis: "top",
-        domain: [0, evmax],
+        domain: [evmin, evmax],
         label: "Expected point contribution per match"
       },
       y: {

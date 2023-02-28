@@ -20,6 +20,9 @@ export type EventDataType = {
     ev: EVType[];
     matches: MatchDataType[];
     team_sims: TeamSimsType;
+    predictions?: {
+        [key:string]:{[pkey:string]: number}
+    }
 }
 
 export type TeamSummaryType = {
