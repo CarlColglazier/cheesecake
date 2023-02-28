@@ -36,8 +36,8 @@ end
 end
 
 @model function endgame_model23(ye::Vector, yd::Vector, yp::Vector)
-	e ~ Beta(1,1)
-	d ~ Beta(1,1)
+	e ~ Beta(1,2.0)
+	d ~ Beta(1,1.5)
 	p ~ Beta(1,1)
 	ye .~ Bernoulli.(e)
 	yd .~ Bernoulli.(d)

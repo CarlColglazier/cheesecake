@@ -62,11 +62,11 @@ export async function getStaticPaths() {
     )
   }
   if (slug.startsWith('2022')) {
-    var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
-    var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
+    var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
+    var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
   } else {
-    var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} />
-    var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} />
+    var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
+    var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
   }
   return (
     <>

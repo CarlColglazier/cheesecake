@@ -18,7 +18,6 @@ def get_all_events_year(year):
 	j = filter(lambda x: x['event_type'] <= 6, j)
 	return list(j)
 
-
 def get_event(key):
 	url = f"{API}/event/{key}"
 	r = requests.get(url, headers=headers)
@@ -42,6 +41,18 @@ def piece_count(d, t):
 	for k, v in d.items():
 		counts[k] = len([x for x in d[k] if x == t])
 	return counts
+
+def proc_schedule(m):
+	return [
+		m['key'],
+		m['comp_level'],
+		m['match_number'],
+		m['time'],
+		list(map(lambda t: int(t[3:]), m['alliances']['red']['team_keys'])),
+		list(map(lambda t: int(t[3:]), m['alliances']['blue']['team_keys'])),
+		m['alliances']['red']['score'],
+		m['alliances']['blue']['score']
+	]
 
 def proc_match(m):
 	g = []
@@ -86,8 +97,20 @@ def proc_match(m):
 #matches = get_matches(e)
 #print(m)
 
+event_keys = ["2023week0", "2023isde1"]
+
+for event_key in event_keys:
+	event = get_event(event_key)
+	matches = get_matches(event)
+	m = list(map(proc_schedule, matches))
+	df = pd.DataFrame(m, columns=[
+		'key', 'comp_level', 'match_number', 'time', 'red_teams', 'blue_teams', 'red_score', 'blue_score'
+	])
+	df.to_feather(f"../data/schedules/{event_key}.feather")
+
+"""
 matches = []
-for event_key in ["2023week0", "2023isde1"]:#get_all_events_year(2023):
+for event_key in event_keys:#get_all_events_year(2023):
 	event = get_event(event_key)
 	matches += get_matches(event)
 
@@ -101,3 +124,4 @@ df = pd.DataFrame(data, columns=[
 	'endgame_charge', 'endGameBridgeState'
 ])
 df.to_feather("../data/raw/frc2023.feather")
+"""

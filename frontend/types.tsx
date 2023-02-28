@@ -23,6 +23,17 @@ export type EventDataType = {
     predictions?: {
         [key:string]:{[pkey:string]: number}
     }
+    schedule: Schedule2023[];
+}
+
+export type Schedule2023 = {
+    key: string;
+    match_number: number;
+    time: number;
+    red_teams: number[];
+    blue_teams: number[];
+    red_score: number;
+    blue_score: number;
 }
 
 export type TeamSummaryType = {
