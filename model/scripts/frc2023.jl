@@ -52,7 +52,14 @@ function build_predictions(sim::FRCModels.Simulator23, matches::DataFrame; n=10_
 	return predictions
 end
 
-function save_event_data(event; time=1677617135)
+function get_schedule(event)
+	schedule = dropmissing(DataFrame(Arrow.Table(datadir("schedules", "$(event).feather"))))
+	schedule.red_teams = map(x -> [y for y in x if !ismissing(y)], schedule.red_teams)
+	schedule.blue_teams = map(x -> [y for y in x if !ismissing(y)], schedule.blue_teams)
+	return schedule[(0 .∉ schedule.red_teams) .& (0 .∉ schedule.blue_teams), :]
+end
+
+function save_event_data(event; time=2077617135)
 	df = df_all |> x -> x[x.event .== event, :]
 	dd = df |> x -> x[x.time .< time, :]
 	#|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 20, :]
@@ -74,9 +81,7 @@ function save_event_data(event; time=1677617135)
 		end
 		team_simulations[team] = di
 	end
-	schedule = dropmissing(DataFrame(Arrow.Table(datadir("schedules", "$(event).feather"))))
-	schedule.red_teams = map(x -> [y for y in x if !ismissing(y)], schedule.red_teams)
-	schedule.blue_teams = map(x -> [y for y in x if !ismissing(y)], schedule.blue_teams)
+	schedule = get_schedule(event)
 	# for testing
 	#=
 	schedule[schedule.comp_level .!== "qm", :red_score] .= -1
@@ -109,9 +114,7 @@ function audit_event(event, df_all)
 		dd = df_e |> x -> x[x.time .< r["time"], :]
 		gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
 		sim = FRCModels.build_model23(gd)
-		schedule = dropmissing(DataFrame(Arrow.Table(datadir("schedules", "$(event).feather"))))
-		schedule.red_teams = map(x -> [y for y in x if !ismissing(y)], schedule.red_teams)
-		schedule.blue_teams = map(x -> [y for y in x if !ismissing(y)], schedule.blue_teams)
+		#sched = get_schedule(event)
 		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
 		pred = build_predictions(sim, redsim, bluesim)
 		predictions[r["key"]] = pred
@@ -120,15 +123,16 @@ function audit_event(event, df_all)
 end
 
 #=
-@time pred = audit_event("2023isde1", df_all)
+event = "2023isde1"
+@time pred = audit_event(event, df_all[(df_all.event .== event), :])
 pdf = DataFrame(values(pred))
 pdf[:, "key"] = collect(keys(pred))
-
-rdf = leftjoin(pdf, schedule, on=:key)
+sched = get_schedule(event)
+rdf = leftjoin(pdf, sched, on=:key)
 rdf[:, "brier"] = ((rdf.red_score .> rdf.blue_score) .- rdf.red_win).^2
 =#
 
-for event in Set(["2023week0", "2023isde1"])
+for event in Set(["2023bcvi", "2023isde2", "2023isde1"])
 	println(event)
 	ev, match_data, team_simulations, predictions, sched = save_event_data(event)
 	write_event(event, ev, match_data, team_simulations, predictions, sched)

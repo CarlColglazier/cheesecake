@@ -25,7 +25,8 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
           <td>{Math.round(team_sims[e.team]["auto_charge"]["12"]/10)}%</td>
           <td>{Math.round(team_sims[e.team]["auto_charge"]["8"]/10)}%</td>
           <td>{Math.round(team_sims[e.team]["auto_charge"]["0"]/10)}%</td>
-          <td>{Math.round(team_sims[e.team]["endgame"]["10"]/10)}%</td>
+          {/*<td>{Math.round(team_sims[e.team]["endgame"]["10"]/10)}%</td>*/}
+          <td></td>
           </tr>)}
       </tbody>
     </table>
