@@ -92,13 +92,12 @@ def proc_match(m):
 			g.append(r)
 	return g
 
-
-#e = get_event("2023isde1")
-#matches = get_matches(e)
-#print(m)
-
-event_keys = ["2023week0", "2023isde1"]
-
+event_keys = [
+	#"2023week0", 
+	#"2023isde1", "2023isde2", 
+	#"2023bcvi", "2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv","2023mimil"
+	"2023bcvi"
+]
 for event_key in event_keys:
 	event = get_event(event_key)
 	matches = get_matches(event)
@@ -107,21 +106,15 @@ for event_key in event_keys:
 		'key', 'comp_level', 'match_number', 'time', 'red_teams', 'blue_teams', 'red_score', 'blue_score'
 	])
 	df.to_feather(f"../data/schedules/{event_key}.feather")
+	#m_breakdown = list(map(proc_match, matches))
+	data = list(itertools.chain.from_iterable(map(proc_match, matches)))
 
-"""
-matches = []
-for event_key in event_keys:#get_all_events_year(2023):
-	event = get_event(event_key)
-	matches += get_matches(event)
-
-data = list(itertools.chain.from_iterable(map(proc_match, matches)))
-df = pd.DataFrame(data, columns=[
-	'event', 'week', 'event_type', 'key', 'alliance', 'comp_level',
-	'match_number', 'time', 'team', 'score', 'winner',
-	'mobility', 'auto_charge', 'auto_charge_points',
-	'auto_countT', 'auto_countM', 'auto_countB',
-	'teleop_countT', 'teleop_countM', 'teleop_countB',
-	'endgame_charge', 'endGameBridgeState'
-])
-df.to_feather("../data/raw/frc2023.feather")
-"""
+	df = pd.DataFrame(data, columns=[
+		'event', 'week', 'event_type', 'key', 'alliance', 'comp_level',
+		'match_number', 'time', 'team', 'score', 'winner',
+		'mobility', 'auto_charge', 'auto_charge_points',
+		'auto_countT', 'auto_countM', 'auto_countB',
+		'teleop_countT', 'teleop_countM', 'teleop_countB',
+		'endgame_charge', 'endGameBridgeState'
+	])
+	df.to_feather(f"../data/breakdowns/{event_key}.feather")

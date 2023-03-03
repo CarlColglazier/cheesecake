@@ -14,8 +14,8 @@ using JSONTables
 import StatsBase: countmap, mean, std
 
 ###
-df_all = dropmissing(DataFrame(Arrow.Table(datadir("raw", "frc2023.feather")))) |>
-         x -> sort(x, :time) #|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 15, :]
+#df_all = dropmissing(DataFrame(Arrow.Table(datadir("raw", "frc2023.feather")))) |>
+#         x -> sort(x, :time) #|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 15, :]
 
 function ev_count_df(sim::FRCModels.Simulator23)
 	return FRCModels.sim_evs(sim) |> 
@@ -59,8 +59,13 @@ function get_schedule(event)
 	return schedule[(0 .∉ schedule.red_teams) .& (0 .∉ schedule.blue_teams), :]
 end
 
+function get_breakdown(event)
+	df = dropmissing(DataFrame(Arrow.Table(datadir("breakdowns", "$(event).feather"))))
+	return df
+end
+
 function save_event_data(event; time=2077617135)
-	df = df_all |> x -> x[x.event .== event, :]
+	df = get_breakdown(event)
 	dd = df |> x -> x[x.time .< time, :]
 	#|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 20, :]
 	gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
@@ -82,14 +87,6 @@ function save_event_data(event; time=2077617135)
 		team_simulations[team] = di
 	end
 	schedule = get_schedule(event)
-	# for testing
-	#=
-	schedule[schedule.comp_level .!== "qm", :red_score] .= -1
-	schedule[schedule.comp_level .!== "qm", :blue_score] .= -1
-	schedule[(schedule.comp_level .== "qm") .& (schedule.match_number .> 20), :red_score] .= -1
-	schedule[(schedule.comp_level .== "qm") .& (schedule.match_number .> 20), :blue_score] .= -1
-	=#
-	#
 	predictions = build_predictions(sim, schedule)
 	return ev, match_data, team_simulations, predictions, schedule
 	
@@ -103,7 +100,7 @@ function write_event(event, ev, match_data, team_simulations, predictions, sched
 end
 
 function audit_event(event, df_all)
-	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
+	df = get_breakdown(event) |> FRCModels.bymatch
 	predictions = Dict{String,Dict{String,Number}}()
 	for (i, r) in enumerate(eachrow(df))
 		if i <= 1 #|| i > 30
@@ -123,8 +120,8 @@ function audit_event(event, df_all)
 end
 
 #=
-event = "2023isde1"
-@time pred = audit_event(event, df_all[(df_all.event .== event), :])
+event = "2023isde2"
+@time pred = audit_event(event, df_all[(df_all.event .== event), :]);
 pdf = DataFrame(values(pred))
 pdf[:, "key"] = collect(keys(pred))
 sched = get_schedule(event)
@@ -132,8 +129,16 @@ rdf = leftjoin(pdf, sched, on=:key)
 rdf[:, "brier"] = ((rdf.red_score .> rdf.blue_score) .- rdf.red_win).^2
 =#
 
-for event in Set(["2023bcvi", "2023isde2", "2023isde1"])
+for event in Set(["2023bcvi", "2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv", "2023mimil"])
+	if mtime("../files/api/events/$(event).json") > mtime(datadir("breakdowns", "$(event).feather"))
+		continue
+	end
 	println(event)
-	ev, match_data, team_simulations, predictions, sched = save_event_data(event)
-	write_event(event, ev, match_data, team_simulations, predictions, sched)
+	#try
+		ev, match_data, team_simulations, predictions, sched = save_event_data(event)
+		write_event(event, ev, match_data, team_simulations, predictions, sched)
+	#catch e
+	#	println(e)
+	#	continue
+	#end
 end

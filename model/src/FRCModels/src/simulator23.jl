@@ -20,6 +20,8 @@ end
 	int ~ Normal(0.0,1)
 	ooff ~ Exponential(1)
 	off ~ filldist(Normal(0,ooff), N)
+	sum_e ~ Normal(0, 0.001 * N) # sum to zero
+	sum_e = sum(off)
 	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
 	for i in 1:length(s)
 		s[i] ~ BinomialLogit(9, lo[i] .+ int)
@@ -31,6 +33,8 @@ end
 	int ~ Normal(0.0,1)
 	ooff ~ Exponential(1)
 	off ~ filldist(Normal(0,ooff), N)
+	sum_e ~ Normal(0, 0.001 * N) # sum to zero
+	sum_e = sum(off)
 	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
 	s .~ BinomialLogit.(9 .- a, lo .+ int)
 	return s
@@ -77,7 +81,7 @@ end
 	park ~ filldist(Normal(0, 1), N)
 
 	sum_e ~ Normal(0, 0.001 * N) # sum to zero
-	sum_e = sum(eng)
+	sum_e = sum(eng) + sum(balanced) + sum(park)
 	for i in eachindex(docks)
 		eng_sum = eng[t[1,i]] + eng[t[2,i]] + eng[t[3,i]]
 		docks[i] ~ BinomialLogit(3, eng_sum + eng_int)
@@ -126,8 +130,9 @@ function count_links(v::AbstractVector)
 end
 
 function simulate_links(n::Int)
-	g = Random.randperm(9) .<= n
-	return count_links(g)
+	# account for the fact these tend not to be random
+	g = [Random.randperm(9) .<= n for _ in 1:2]
+	return maximum(count_links.(g))
 end
 
 
@@ -357,7 +362,7 @@ function simulate_endgame(sim::Simulator23, teamsv::Vector{Int}, n::Int)
 	bint = first(get(chain, :balanced_int))
 	pint = first(get(chain, :park_int))
 	team_indeces = [teams(sim.gd)[x] for x in teamsv]
-	e = sum(first(get(chain, :eng))[team_indeces])
+	e = sum(first(get(chain, :eng))[team_indeces]) .- minimum(reduce(hcat, first(get(chain, :eng))[[1,2,3]]), dims=2)
 	b = sum(first(get(chain, :balanced))[team_indeces])
 	p = sum(first(get(chain, :park))[team_indeces])
 	docked = rand.(rand(BinomialLogit.(3, e .+ eint), n))
@@ -427,13 +432,8 @@ function simulate_teams_tuple(sim::Simulator23, teamsv::Vector{Int}, n)
 	tele_countB=simulate_piece_counts_tele(sim.gd, sim.teleB, teamsv, auto_countB, n)
 	link_count = simulate_links.(auto_countT .+ tele_countT) .+ simulate_links.(auto_countM .+ tele_countM) .+ simulate_links.(auto_countB .+ tele_countB)
 	endgame, park=simulate_endgame_points(sim, teamsv, n)
-	#endgame=[simulate_endgame_points(sim, team, n) for team in teamsv]
-	eg_sim=deepcopy(endgame)
-	#for _ in 1:3-length(teamsv)
-	#	push!(eg_sim, rand(collect(Iterators.flatten([FRCModels.simulate_endgame_points(sim, team, n) for team in sim.gd.teams])), n))
-	#end
-	activation_scores=auto_charge .+ endgame#sum(map.(x->x>2 ? x : 0, eg_sim))
-	
+	#eg_sim=deepcopy(endgame)
+	activation_scores=auto_charge .+ endgame
 	activation = activation_scores .>=26
 	sustainability=link_count.>=rand([4,4,5],n)
 	return (
@@ -453,28 +453,8 @@ function simulate_teams_tuple(sim::Simulator23, teamsv::Vector{Int}, n)
 	)
 end
 
-function simulate_team_tuple(sim::Simulator23, team::Int, n)
-	return simulate_teams_tuple(sim, [team], n)
-end
-
-function simulate_team(sim::Simulator23, team, n)
-	t = simulate_team_tuple(sim, team, n)
-	return (
-		3*t.auto_mobile .+
-		t.auto_charge .+
-		6*t.auto_countT .+
-		4*t.auto_countM .+
-		3*t.auto_countB .+
-		5*t.tele_countT .+
-		3*t.tele_countM .+
-		2*t.tele_countB .+
-		t.endgame
-	)
-end
-
-function ev_team(sim::Simulator23, team::Int, n::Int)
-	t = simulate_team_tuple(sim, team, n)
-
+function simulate_teams_tuple(sim::Simulator23, n)
+	auto_charge=simulate_auto_charge_points(sim, n)
 	autoT=simulate_piece_counts(sim.gd, sim.autoT, n)
 	autoM=simulate_piece_counts(sim.gd, sim.autoM, n)
 	autoB=simulate_piece_counts(sim.gd, sim.autoB, n) 
@@ -483,48 +463,59 @@ function ev_team(sim::Simulator23, team::Int, n::Int)
 	teleB=simulate_piece_counts_tele(sim.teleB, autoT, n)
 	link_count = simulate_links.(autoT .+ teleT) .+ simulate_links.(autoM .+ teleM) .+ simulate_links.(autoB .+ teleB)
 	endgame, park=simulate_endgame_points(sim, n)
-	#rand(collect(Iterators.flatten([FRCModels.simulate_endgame_points(sim, team, n) for team in sim.gd.teams])), n)
 	return (
-		t.auto_charge .- simulate_auto_charge_points(sim, n) .+
-		6*t.auto_countT .- 6*autoT .+
-		4*t.auto_countM .- 4*autoM .+
-		3*t.auto_countB .- 3*autoB.+
-		5*t.tele_countT .- 5*teleT .+
-		3*t.tele_countM .- 3*teleM .+
-		2*t.tele_countB .- 2*teleB .+
-		# TODO: WAR
-		5*t.link_count .- 5*link_count .+
-		t.endgame .- endgame
+		auto_mobile=rand([0,0,3], n), # TODO
+		auto_charge=auto_charge,
+		auto_countT=autoT,
+		auto_countM=autoM,
+		auto_countB=autoB,
+		tele_countT=teleT,
+		tele_countM=teleM,
+		tele_countB=teleB,
+		link_count=link_count,
+		endgame=endgame,
+		#activation_scores=activation_scores,
+		#activation=activation,
+		#sustainability=sustainability
 	)
+end
+
+function simulate_team_tuple(sim::Simulator23, team::Int, n)
+	return simulate_teams_tuple(sim, [team], n)
+end
+
+function score(t::NamedTuple)
+	return (
+		3*t.auto_mobile .+
+		t.auto_charge .+
+		6*t.auto_countT .+
+		4*t.auto_countM .+
+		3*t.auto_countB .+
+		5*t.tele_countT .+
+		3*t.tele_countM .+
+		2*t.tele_countB .+
+		t.endgame
+	)
+end
+
+function simulate_team(sim::Simulator23, team, n)
+	t = simulate_team_tuple(sim, team, n)
+	return score(t)
+end
+
+function ev_team(sim::Simulator23, team::Int, n::Int)
+	t = simulate_team_tuple(sim, team, n)
+	a = simulate_teams_tuple(sim, n)
+	return Int.(round.(score(t) .- score(a)))
 end
 
 function simulate_teams(sim::Simulator23, teamsv::Vector{Int}, n)
 	t = simulate_teams_tuple(sim, teamsv, n)
-	return (
-		3*t.auto_mobile .+
-		t.auto_charge .+
-		6*t.auto_countT .+
-		4*t.auto_countM .+
-		3*t.auto_countB .+
-		5*t.tele_countT .+
-		3*t.tele_countM .+
-		2*t.tele_countB .+
-		t.endgame
-	)
+	return score(t)
 end
 
 function simulate_teams(t::NamedTuple)
-	return (
-		3*t.auto_mobile .+
-		t.auto_charge .+
-		6*t.auto_countT .+
-		4*t.auto_countM .+
-		3*t.auto_countB .+
-		5*t.tele_countT .+
-		3*t.tele_countM .+
-		2*t.tele_countB .+
-		t.endgame
-	)
+	return score(t)
 end
 
 function sim_evs(sim::Simulator23; n=100_000)
