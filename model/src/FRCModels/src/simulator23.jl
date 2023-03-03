@@ -68,22 +68,38 @@ end
 	end
 end
 
-function build_dock_model(gd::GameData)
-	df = gd.df
+@model function dock_model2(docks::AbstractVector, level::AbstractVector, parked::AbstractVector, t::Matrix, N::Int)
+	eng_int ~ Normal(0, 1)
+	balanced_int ~ Normal(2, 1)
+	park_int ~ Normal(2, 1)
+	eng ~ filldist(Normal(0, 1), N)
+	balanced ~ filldist(Normal(0, 1), N)
+	park ~ filldist(Normal(0, 1), N)
+
+	sum_e ~ Normal(0, 0.001 * N) # sum to zero
+	sum_e = sum(eng)
+	for i in eachindex(docks)
+		eng_sum = eng[t[1,i]] + eng[t[2,i]] + eng[t[3,i]]
+		docks[i] ~ BinomialLogit(3, eng_sum + eng_int)
+		if docks[i] > 0
+			lev_av = (balanced[t[1,i]] + balanced[t[2,i]] + balanced[t[3,i]])
+			level[i] ~ BernoulliLogit(lev_av + balanced_int)
+		else
+			park_sum = park[t[1,i]] + park[t[2,i]] + park[t[3,i]]
+			parked[i] ~ BinomialLogit(3 - docks[i], park_sum + park_int)
+		end
+	end
+end
+
+function build_dock_model(teams::Matrix, docked::Vector{Int}, parked::Vector{Int}, level::Vector{Bool}, teams_n::Int)
 	logger = Logging.NullLogger()
-	if nrow(df) > 0
-		model = dock_model(
-			df.endgame_charge .== "Docked",
-			df.endGameBridgeState .== "Level",
-			df.endgame_charge .== "Park",
-			[teams(gd)[y] for y in df.team],
-			length(gd.teams)
-		)
+	if length(docked) > 0
+		model = dock_model2(docked, level, parked, teams, teams_n)
 		s = Logging.with_logger(logger) do
 			sample(model, NUTS(), 250; progress=false, verbose=false);
 		end
 	else
-		model = dock_model([true],[true],[false],[1], 1)
+		model = dock_model2([2],[true],[1],[1 2 3;], 3)
 		s = Logging.with_logger(logger) do
 			sample(model, Prior(), 1000; progress=false)
 		end
@@ -125,6 +141,9 @@ function build_model23(gd::GameData)
 		:teleop_countT => first => :tele_countT,
 		:teleop_countM => first => :tele_countM,
 		:teleop_countB => first => :tele_countB,
+		:endgame_charge => (x -> sum(x .== "Docked")) => :endgame_docked,
+		:endgame_charge => (x -> sum(x .== "Park")) => :endgame_parked,
+		:endGameBridgeState => (x -> first(x) == "Level") => :endgame_level,
     )
 
 	team_matrix = Matrix(reshape(gd.df.team, 3, size(gd.df,1) ÷ 3)')
@@ -140,16 +159,13 @@ function build_model23(gd::GameData)
     for team in keys(teams(gd))
         endgame[team] = team_endgame_model23(gd, team)
     end
-
 	autoT = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countT, length(gd.teams)))
 	autoM = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countM, length(gd.teams)))
 	autoB = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countB, length(gd.teams)))
 	teleT = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countT, length(gd.teams)))
 	teleM = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countM, length(gd.teams)))
 	teleB = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countB, length(gd.teams)))
-
-	dock = build_dock_model(gd)
-
+	dock = build_dock_model(hcat(x.teams...), x.endgame_docked, x.endgame_parked, x.endgame_level, length(gd.teams))
     return Simulator23(
         gd, team_auto_mobile, team_auto_charge,
 		autoT, autoM, autoB,
@@ -329,29 +345,31 @@ function simulate_endgame(sim::Simulator23, n::Int)
 	eint = first(get(chain, :eng_int))
 	bint = first(get(chain, :balanced_int))
 	pint = first(get(chain, :park_int))
-	docked = rand.(rand(BernoulliLogit.(eint), n))
+	docked = rand.(rand(BinomialLogit.(3, eint), n))
 	balanced = rand.(rand(BernoulliLogit.(bint), n))
-	park = .!docked .& rand.(rand(BernoulliLogit.(pint), n))
-	return docked, balanced, park
+	parked = rand.(BinomialLogit.(3 .- docked, rand(pint, n)))
+	return docked, balanced, parked
 end
 
 function simulate_endgame(sim::Simulator23, teamsv::Vector{Int}, n::Int)
-	docked = []
-	balanced = []
-	park = []
-	for i in 1:3
-		d, b, p = (i <= length(teamsv)) ? FRCModels.simulate_endgame(sim, teamsv[i], n) : FRCModels.simulate_endgame(sim, n)
-		push!(docked, d)
-		push!(balanced, b)
-		push!(park, p)
-	end
-	return docked, balanced, park
+	chain = sim.dock.chain
+	eint = first(get(chain, :eng_int))
+	bint = first(get(chain, :balanced_int))
+	pint = first(get(chain, :park_int))
+	team_indeces = [teams(sim.gd)[x] for x in teamsv]
+	e = sum(first(get(chain, :eng))[team_indeces])
+	b = sum(first(get(chain, :balanced))[team_indeces])
+	p = sum(first(get(chain, :park))[team_indeces])
+	docked = rand.(rand(BinomialLogit.(3, e .+ eint), n))
+	balanced = rand.(rand(BernoulliLogit.(b .+ bint), n))
+	parked = rand.(BinomialLogit.(3 .- docked, rand(p .+ pint, n)))
+	return docked, balanced, parked
 end
 
 function simulate_endgame_points(sim::Simulator23, n::Int)
-	docked, balanced, park = simulate_endgame(sim, Vector{Int}(), n)
-	bal = maximum(balanced) # TODO: is this how I want to do this?
-	return 10 * sum(docked) .* bal .+ 6 * sum(docked) .* .!bal, 2 * sum(park)
+	docked, balanced, park = simulate_endgame(sim, n)
+	bal = balanced # TODO: is this how I want to do this?
+	return 10 * docked .* bal .+ 6 * docked .* .!bal, 2 * sum(park)
 end
 
 function simulate_endgame_points(sim::Simulator23, team::Int, n::Int)
@@ -362,8 +380,8 @@ end
 # TODO: 
 function simulate_endgame_points(sim::Simulator23, teamsv::Vector{Int}, n::Int)
 	docked, balanced, park = simulate_endgame(sim, teamsv, n)
-	bal = maximum(balanced) # TODO: is this how I want to do this?
-	return 10 * sum(docked) .* bal .+ 6 * sum(docked) .* .!bal, 2 * sum(park)
+	bal = balanced # TODO: is this how I want to do this?
+	return 10 * docked .* bal .+ 6 * docked .* .!bal, 2 * sum(park)
 end
 
 function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int)
