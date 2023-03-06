@@ -70,7 +70,6 @@ export async function getStaticPaths() {
   }
   return (
     <>
-      <p>This is the page for the event.</p>
       <Tab.Group>
         <Tab.List>
           <Tab className='p-4'>Rankings</Tab>

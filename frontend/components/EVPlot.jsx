@@ -16,7 +16,12 @@ function EVPlot({ data }) {
     )});
 
   const neworder = data.map(function (e) { 
-    return { "team":e.team, "median":quartile(e.points, e.bcount, 0.5), "qlow":quartile(e.points, e.bcount, 0.1), "qhigh":quartile(e.points, e.bcount, 0.9) }
+    return { 
+      "team":e.team,
+      "median":quartile(e.points, e.bcount, 0.5),
+      "qlow":quartile(e.points, e.bcount, 0.1),
+      "qhigh":quartile(e.points, e.bcount, 0.9)
+    }
   }).sort(function(a, b) { return b.median - a.median });
   const neworderteams = neworder.map(function(e) { return e.team });
   const evmax = Math.max(...neworder.map(a => a.qhigh));

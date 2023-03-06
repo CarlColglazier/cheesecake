@@ -16,6 +16,12 @@ export type TeamSimsType = {
     };
 }
 
+export type TeamCalculation = {
+    [team: string]: {
+        [v: string]: number
+    }
+}
+
 export type EventDataType = {
     ev: EVType[];
     matches: MatchDataType[];

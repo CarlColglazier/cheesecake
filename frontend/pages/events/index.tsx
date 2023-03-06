@@ -12,7 +12,6 @@ type Props = {
 const EventIndexPage: React.FC<Props> = ({ events }) => {
   return (
     <>
-      <p>This is the page for the event index.</p>
       <ul>
         {events.map((e: string, i: Key | null | undefined) => (
           <li key={i} ><Link href={"/events/" + e}>{e}</Link></li>
