@@ -3,38 +3,75 @@ import itertools
 import pandas as pd
 from dotenv import load_dotenv
 import os
-
+from pathlib import Path
+import json
+import hashlib
 load_dotenv()
 
 API = "https://www.thebluealliance.com/api/v3"
-headers = {"X-TBA-Auth-Key":os.environ.get("KEY")}
+header_file_loc = "../data/raw/headers.json"
+def get_headers():
+	p = Path(header_file_loc)
+	if p.is_file():
+		with open(p, "r") as f:
+			return json.load(f)
+	return {}
+
+header_cache = get_headers()
+
+def run_query(u):
+	header = {
+		"X-TBA-Auth-Key":os.environ.get("KEY"),
+	}
+	uri = f"{API}/{u}"
+	if uri in header_cache:
+		header["If-None-Match"] = header_cache[uri]
+	r = requests.get(uri, headers=header)
+	p = Path(f"../data/cache/{u.replace('/', '_')}.json")
+	if r.status_code == 200:
+		header_cache[uri] = r.headers["ETag"]
+		j = r.json()
+		with open(p, "r") as f:
+			fj = json.load(f)
+			if len(json.dumps(fj, sort_keys=True)) == len(json.dumps(j, sort_keys=True)):
+				#print(f"Found equal match for {u}")
+				return (j, False)
+		print(f"UPDATING {uri}")
+		with open(p, "w") as f:
+			json.dump(j, f, sort_keys=True)
+		return (j, True)
+	if p.is_file():
+		with open(p, "r") as f:
+			return (json.load(f), False)
+	else:
+		return (None, False)
+
 """
 Get keys for events in the year
 """
 def get_all_events_year(year):
-	url = f"{API}/events/{year}"
-	r = requests.get(url, headers=headers)
-	j = r.json()
+	url = f"events/{year}"
+	j, _ = run_query(url)
 	j = filter(lambda x: x['event_type'] <= 6, j)
-	return list(j)
+	return list(map(lambda x: x['key'], j))
 
 def get_event(key):
-	url = f"{API}/event/{key}"
-	r = requests.get(url, headers=headers)
-	return r.json()
+	url = f"event/{key}"
+	return run_query(url)[0]
 
 def get_matches(event):
 	event_key = event['key']
-	url = f"{API}/event/{event_key}/matches"
-	r = requests.get(url, headers=headers)
-	j = r.json()
+	url = f"event/{event_key}/matches"
+	j, should_run = run_query(url)
+	if j is None or should_run is False:
+		return (None, False)
 	for m in j:
 		if event['week'] is None:
 			m['week'] = 10
 		else:
 			m['week'] = event['week']
 		m['event_type'] = event['event_type']
-	return j
+	return j, should_run
 
 def piece_count(d, t):
 	counts = {}
@@ -92,23 +129,23 @@ def proc_match(m):
 			g.append(r)
 	return g
 
-event_keys = [
-	#"2023week0", 
-	#"2023isde1", "2023isde2", 
-	#"2023bcvi", "2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv","2023mimil"
-	"2023bcvi"
-]
+event_keys = get_all_events_year(2023)
 for event_key in event_keys:
 	event = get_event(event_key)
-	matches = get_matches(event)
+	matches, should_run = get_matches(event)
+	if should_run is False:
+		continue
+	if matches is None:
+		continue
+	if len(matches) == 0:
+		continue
 	m = list(map(proc_schedule, matches))
 	df = pd.DataFrame(m, columns=[
 		'key', 'comp_level', 'match_number', 'time', 'red_teams', 'blue_teams', 'red_score', 'blue_score'
 	])
-	df.to_feather(f"../data/schedules/{event_key}.feather")
-	#m_breakdown = list(map(proc_match, matches))
+	if df.shape[0] > 0:
+		df.to_feather(f"../data/schedules/{event_key}.feather")
 	data = list(itertools.chain.from_iterable(map(proc_match, matches)))
-
 	df = pd.DataFrame(data, columns=[
 		'event', 'week', 'event_type', 'key', 'alliance', 'comp_level',
 		'match_number', 'time', 'team', 'score', 'winner',
@@ -117,4 +154,9 @@ for event_key in event_keys:
 		'teleop_countT', 'teleop_countM', 'teleop_countB',
 		'endgame_charge', 'endGameBridgeState'
 	])
-	df.to_feather(f"../data/breakdowns/{event_key}.feather")
+	#print(event_key)
+	if df.shape[0] > 0:
+		df.to_feather(f"../data/breakdowns/{event_key}.feather")
+
+with open(Path(header_file_loc), "w") as f:
+	json.dump(header_cache, f)
