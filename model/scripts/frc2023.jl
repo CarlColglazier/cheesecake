@@ -11,7 +11,7 @@ import OrderedCollections: OrderedSet
 
 using JSON3
 using JSONTables
-import StatsBase: countmap, mean, std
+import StatsBase: countmap, mean, std, median
 
 ###
 #df_all = dropmissing(DataFrame(Arrow.Table(datadir("raw", "frc2023.feather")))) |>
@@ -40,6 +40,8 @@ function build_predictions(sim::FRCModels.Simulator23, redsim, bluesim; n=10_000
 	d["blue_activation"] = mean(bluesim.activation)
 	d["red_sustainability"] = mean(redsim.sustainability)
 	d["blue_sustainability"] = mean(bluesim.sustainability)
+	d["red_score_median"] = median(FRCModels.score(redsim))
+	d["blue_score_median"] = median(FRCModels.score(bluesim))
 	return d
 end
 
@@ -66,9 +68,11 @@ end
 
 function save_event_data(event; time=2077617135)
 	df = get_breakdown(event)
+	schedule = get_schedule(event)
+	sched_teams = Set(collect(Iterators.flatten(reduce(vcat, [schedule.red_teams, schedule.blue_teams]))))
 	dd = df |> x -> x[x.time .< time, :]
 	#|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 20, :]
-	gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
+	gd = FRCModels.GameData(dd, sched_teams)
 	sim = FRCModels.build_model23(gd)
 	y = sim |>
 			x -> rename(ev_count_df(x), :count=>:bcount) |>
@@ -86,7 +90,7 @@ function save_event_data(event; time=2077617135)
 		end
 		team_simulations[team] = di
 	end
-	schedule = get_schedule(event)
+	
 	predictions = build_predictions(sim, schedule)
 	return ev, match_data, team_simulations, predictions, schedule
 	
@@ -100,10 +104,10 @@ function write_event(event, ev, match_data, team_simulations, predictions, sched
 end
 
 function audit_event(event, df_all)
-	df = get_breakdown(event) |> FRCModels.bymatch
+	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
 	predictions = Dict{String,Dict{String,Number}}()
 	for (i, r) in enumerate(eachrow(df))
-		if i <= 1 #|| i > 30
+		if i <= 1
 			continue
 		end
 		println(r["key"])
@@ -114,22 +118,25 @@ function audit_event(event, df_all)
 		#sched = get_schedule(event)
 		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
 		pred = build_predictions(sim, redsim, bluesim)
+		println(pred["red_win"])
 		predictions[r["key"]] = pred
 	end
 	return predictions
 end
 
-#=
-event = "2023isde2"
-@time pred = audit_event(event, df_all[(df_all.event .== event), :]);
-pdf = DataFrame(values(pred))
-pdf[:, "key"] = collect(keys(pred))
-sched = get_schedule(event)
-rdf = leftjoin(pdf, sched, on=:key)
-rdf[:, "brier"] = ((rdf.red_score .> rdf.blue_score) .- rdf.red_win).^2
-=#
+function produce_audit(event)
+	df_all = sort(get_breakdown(event), :time)
+	@time pred = audit_event(event, df_all[(df_all.event .== event), :]);
+	pdf = DataFrame(values(pred))
+	pdf[:, "key"] = collect(keys(pred))
+	sched = get_schedule(event)
+	rdf = leftjoin(pdf, sched, on=:key)
+	rdf[:, "brier"] = ((rdf.red_score .> rdf.blue_score) .- rdf.red_win).^2
+	return rdf
+end
 
-for event in Set(["2023bcvi", "2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv", "2023mimil"])
+#for event in Set(["2023ncash"])
+for event in Set(["2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv", "2023mimil", "2023orore", "2023ncash", "2023caph", "2023txdal", "2023wasno", "2023inmis"])
 	if mtime("../files/api/events/$(event).json") > mtime(datadir("breakdowns", "$(event).feather"))
 		continue
 	end

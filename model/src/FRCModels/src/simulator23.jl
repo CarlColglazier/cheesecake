@@ -17,7 +17,7 @@ mutable struct Simulator23
 end
 
 @model function piece_count_model(t::Matrix{Int}, s::Vector{Int}, N::Int)
-	int ~ Normal(0.0,1)
+	int ~ Normal(-2,1)
 	ooff ~ Exponential(1)
 	off ~ filldist(Normal(0,ooff), N)
 	sum_e ~ Normal(0, 0.001 * N) # sum to zero
@@ -30,7 +30,7 @@ end
 end
 
 @model function piece_count_model_tele(t::Matrix{Int}, s::Vector{Int}, a::Vector{Int}, N::Int)
-	int ~ Normal(0.0,1)
+	int ~ Normal(-1,1)
 	ooff ~ Exponential(1)
 	off ~ filldist(Normal(0,ooff), N)
 	sum_e ~ Normal(0, 0.001 * N) # sum to zero
@@ -362,7 +362,7 @@ function simulate_endgame(sim::Simulator23, teamsv::Vector{Int}, n::Int)
 	bint = first(get(chain, :balanced_int))
 	pint = first(get(chain, :park_int))
 	team_indeces = [teams(sim.gd)[x] for x in teamsv]
-	e = sum(first(get(chain, :eng))[team_indeces]) .- minimum(reduce(hcat, first(get(chain, :eng))[[1,2,3]]), dims=2)
+	e = sum(first(get(chain, :eng))[team_indeces]) .- 0.5*minimum(reduce(hcat, first(get(chain, :eng))[[1,2,3]]), dims=2)
 	b = sum(first(get(chain, :balanced))[team_indeces])
 	p = sum(first(get(chain, :park))[team_indeces])
 	docked = rand.(rand(BinomialLogit.(3, e .+ eint), n))
@@ -395,23 +395,24 @@ function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int)
 end
 
 function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int)
-	int = rand(first(get(pm.chain, :int)), n)
+	int = first(get(pm.chain, :int))
 	r = []
 	for team in teamsv
 		sp = first(get(pm.chain, :off))[teams(gd)[team]]
-		push!(r, rand(sp, n))
+		push!(r, sp)
 	end
-	return rand.(BinomialLogit.(Ref(9), sum(r) .+ int))
+	return rand.(rand(BinomialLogit.(9, sum(r) .+ int), n))
 end
 
 function simulate_piece_counts_tele(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, auto_counts::Vector{Int}, n::Int)
-	int = rand(first(get(pm.chain, :int)), n)
+	int = first(get(pm.chain, :int))
 	r = []
 	for team in teamsv
 		sp = first(get(pm.chain, :off))[teams(gd)[team]]
-		push!(r, rand(sp, n))
+		push!(r, sp)
 	end
-	return rand.(BinomialLogit.(9 .- auto_counts, int .+ sum(r)))
+	ri = rand(int .+ sum(r), n)
+	return rand.(BinomialLogit.(9 .- auto_counts, ri))
 end
 
 function simulate_piece_counts_tele(pm::PredictionModel, auto_counts::Vector{Int}, n::Int)
@@ -536,8 +537,8 @@ function run_event_once23(df, key)
 end
 
 function simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
-	bluesim = simulate_teams_tuple(sim, blue, n) #.+ 4*simulate_count_teams(sim.gd, sim.fouls, red, n)
-	redsim = simulate_teams_tuple(sim, red, n) #.+ 4*simulate_count_teams(sim.gd, sim.fouls, blue, n)
+	bluesim = simulate_teams_tuple(sim, blue, n)
+	redsim = simulate_teams_tuple(sim, red, n)
 	return bluesim, redsim
 end
 
