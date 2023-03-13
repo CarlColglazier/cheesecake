@@ -41,8 +41,8 @@ def run_query(u):
 			json.dump(j, f, sort_keys=True)
 		return (j, True)
 	if p.is_file():
-		with open(p, "r") as f:
-			return (json.load(f), False)
+		js = json.load(open(p, "r"))
+		return (js, False)
 	else:
 		return (None, False)
 
@@ -124,7 +124,9 @@ def proc_match(m):
 				teleop_counts_cone['M'] + teleop_counts_cube['M'],
 				teleop_counts_cone['B'] + teleop_counts_cube['B'],
 				b[f"endGameChargeStationRobot{i+1}"],
-				b["endGameBridgeState"]
+				b["endGameBridgeState"],
+				b["activationBonusAchieved"],
+				b["sustainabilityBonusAchieved"]
 			]
 			g.append(r)
 	return g
@@ -152,9 +154,9 @@ for event_key in event_keys:
 		'mobility', 'auto_charge', 'auto_charge_points',
 		'auto_countT', 'auto_countM', 'auto_countB',
 		'teleop_countT', 'teleop_countM', 'teleop_countB',
-		'endgame_charge', 'endGameBridgeState'
+		'endgame_charge', 'endGameBridgeState',
+		'activation', 'sustainability'
 	])
-	#print(event_key)
 	if df.shape[0] > 0:
 		df.to_feather(f"../data/breakdowns/{event_key}.feather")
 

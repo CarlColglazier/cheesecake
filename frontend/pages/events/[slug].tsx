@@ -8,6 +8,8 @@ import {EventDataType} from '../../types';
 import { Tab } from '@headlessui/react';
 import EVTable from '../../components/EVTable';
 import EVTable2023 from '../../components/EVTable2023';
+import TeamBreakdown from '../../components/TeamBreakdown';
+
 import useSWR, { SWRConfig, Fetcher } from 'swr';
 
 
@@ -62,9 +64,11 @@ export async function getStaticPaths() {
     )
   }
   if (slug.startsWith('2022')) {
+    var plot = <EVPlot data={data.ev} />
     var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
     var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
   } else {
+    var plot = <EVPlot data={data.ev} />
     var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
     var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
   }
@@ -74,12 +78,13 @@ export async function getStaticPaths() {
         <Tab.List>
           <Tab className='p-4'>Rankings</Tab>
           <Tab className='p-4'>Matches</Tab>
+          {/*<Tab className='p-4'>Team Breakdown</Tab>*/}
         </Tab.List>
         <Tab.Panels>
           <Tab.Panel>
             <div className="grid grid-cols-2 break-after-column">
               <div className='col-span-2 lg:col-span-1'>
-                <EVPlot data={data.ev} />
+                {plot}
               </div>
               <div className='col-span-2 lg:col-span-1'>
                 {evtable}
@@ -89,6 +94,18 @@ export async function getStaticPaths() {
           <Tab.Panel>
             {matchtable}
           </Tab.Panel>
+          {/*
+          <Tab.Panel>
+            <div className="grid grid-cols-2 break-after-column">
+              <div className='col-span-2 lg:col-span-1'>
+                <TeamBreakdown ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
+              </div>
+              <div className='col-span-2 lg:col-span-1'>
+                <TeamBreakdown ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
+              </div>
+            </div>
+          </Tab.Panel>
+  */}
         </Tab.Panels>
       </Tab.Group>
     </>

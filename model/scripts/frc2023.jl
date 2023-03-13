@@ -17,6 +17,12 @@ import StatsBase: countmap, mean, std, median
 #df_all = dropmissing(DataFrame(Arrow.Table(datadir("raw", "frc2023.feather")))) |>
 #         x -> sort(x, :time) #|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 15, :]
 
+elos = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
+	x -> Dict(x.Team .=> x.Elo)
+elo_t = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
+	x -> Dict(x.Team .=> (x.Elo .- 1450)./1000)
+
+
 function ev_count_df(sim::FRCModels.Simulator23)
 	return FRCModels.sim_evs(sim) |> 
 		x -> DataFrame(:team=>x.teams, :points => x.sims) |>
@@ -63,24 +69,26 @@ end
 
 function get_breakdown(event)
 	df = dropmissing(DataFrame(Arrow.Table(datadir("breakdowns", "$(event).feather"))))
-	return df
+	return sort(df, :time)
 end
 
-function save_event_data(event; time=2077617135)
-	df = get_breakdown(event)
+function save_event_data(event)
+	df = get_breakdown(event) #|> x -> x[(x.comp_level .== "qm") .& (x.match_number .<= 12), :]
+	#|> x -> x[(x.comp_level .== "qm") .| ((x.comp_level .== "sf") .& (x.match_number .< 10)), :]
 	schedule = get_schedule(event)
 	sched_teams = Set(collect(Iterators.flatten(reduce(vcat, [schedule.red_teams, schedule.blue_teams]))))
-	dd = df |> x -> x[x.time .< time, :]
-	#|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 20, :]
-	gd = FRCModels.GameData(dd, sched_teams)
-	sim = FRCModels.build_model23(gd)
+	gd = FRCModels.GameData(df, sched_teams)
+	println("Building simulation for $(event)")
+	sim = FRCModels.build_model23(gd, elo_t)
+	println("Sumulating EV for $(event)")
 	y = sim |>
 			x -> rename(ev_count_df(x), :count=>:bcount) |>
 			x -> transform(x, :team=>ByRow(string)=>:team)
 	ev = groupby(y, :team) |> 
 		collect .|> 
 		x -> Dict("points"=>x.points, "bcount"=>x.bcount, "team"=>first(x.team))
-	match_data = df |> FRCModels.bymatch
+	match_data = df |> FRCModels.bymatch23
+	println("Team simulations for $(event)")
 	team_simulations = Dict{Int, Dict}()
 	for team in sim.gd.teams
 		sim_data = FRCModels.simulate_team_tuple(sim, team, 1_000)
@@ -90,7 +98,7 @@ function save_event_data(event; time=2077617135)
 		end
 		team_simulations[team] = di
 	end
-	
+	println("Predictions for $(event)")
 	predictions = build_predictions(sim, schedule)
 	return ev, match_data, team_simulations, predictions, schedule
 	
@@ -114,8 +122,7 @@ function audit_event(event, df_all)
 		df_e = df_all |> x -> x[x.event .== event, :] #|> x -> x[x.time .< time, :]
 		dd = df_e |> x -> x[x.time .< r["time"], :]
 		gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
-		sim = FRCModels.build_model23(gd)
-		#sched = get_schedule(event)
+		sim = FRCModels.build_model23(gd, elo_t)
 		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
 		pred = build_predictions(sim, redsim, bluesim)
 		println(pred["red_win"])
@@ -135,17 +142,18 @@ function produce_audit(event)
 	return rdf
 end
 
-#for event in Set(["2023ncash"])
-for event in Set(["2023flwp", "2023arli", "2023mndu", "2023mxmo", "2023utwv", "2023mimil", "2023orore", "2023ncash", "2023caph", "2023txdal", "2023wasno", "2023inmis"])
+all_events = collect(JSON3.read(read("../files/api/events.json", String)))
+
+for event in all_events
 	if mtime("../files/api/events/$(event).json") > mtime(datadir("breakdowns", "$(event).feather"))
 		continue
 	end
 	println(event)
-	#try
+	try
 		ev, match_data, team_simulations, predictions, sched = save_event_data(event)
 		write_event(event, ev, match_data, team_simulations, predictions, sched)
-	#catch e
-	#	println(e)
-	#	continue
-	#end
+	catch e
+		println(e)
+		continue
+	end
 end

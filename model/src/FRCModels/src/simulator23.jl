@@ -12,64 +12,49 @@ mutable struct Simulator23
 	teleT::PredictionModel
 	teleM::PredictionModel
 	teleB::PredictionModel
-	endgame::Dict{Int,PredictionModel}
+	#endgame::Dict{Int,PredictionModel}
 	dock::PredictionModel
 end
 
-@model function piece_count_model(t::Matrix{Int}, s::Vector{Int}, N::Int)
+function bymatch23(df::DataFrame)
+	combine(
+        filter(y -> length(y.key) == 6 && sum([y.score[1], y.score[6]]) != 1, groupby(df, [:key])),
+		:key=>first=>:key,
+        :team => (y -> [y[1:3]]) => :red,
+        :team => (y -> [y[4:6]]) => :blue,
+        :score => (y -> y[1]) => :red_score,
+        :score => (y -> y[6]) => :blue_score,
+        :winner => first => :winner,
+        :match_number => first => :match_number,
+        :time => first => :time,
+		:activation => first => :red_activation,
+		:activation => last => :blue_activation,
+		:sustainability => first => :red_sustainability,
+		:sustainability => last => :blue_sustainability
+    )
+end
+
+@model function piece_count_model(t::Matrix{Int}, y::Vector{Int}, priors::AbstractVector, N::Int)
 	int ~ Normal(-2,1)
 	ooff ~ Exponential(1)
-	off ~ filldist(Normal(0,ooff), N)
+	off ~ arraydist(Normal.(priors,ooff))
 	sum_e ~ Normal(0, 0.001 * N) # sum to zero
 	sum_e = sum(off)
 	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
-	for i in 1:length(s)
-		s[i] ~ BinomialLogit(9, lo[i] .+ int)
+	for i in 1:length(y)
+		y[i] ~ BinomialLogit(9, lo[i] .+ int)
 	end
-	return s
+	return y
 end
 
-@model function piece_count_model_tele(t::Matrix{Int}, s::Vector{Int}, a::Vector{Int}, N::Int)
+@model function piece_count_model_tele(t::Matrix{Int}, y::Vector{Int}, p::Vector{Int}, priors::AbstractVector, N::Int)
 	int ~ Normal(-1,1)
 	ooff ~ Exponential(1)
-	off ~ filldist(Normal(0,ooff), N)
+	off ~ arraydist(Normal.(priors,ooff))
 	sum_e ~ Normal(0, 0.001 * N) # sum to zero
 	sum_e = sum(off)
 	lo = off[t[1,:]] + off[t[2,:]] + off[t[3,:]]
-	s .~ BinomialLogit.(9 .- a, lo .+ int)
-	return s
-end
-
-@model function endgame_model23(ye::Vector, yd::Vector, yp::Vector)
-	e ~ Beta(1,2.0)
-	d ~ Beta(1,1.5)
-	p ~ Beta(1,1)
-	ye .~ Bernoulli.(e)
-	yd .~ Bernoulli.(d)
-	yp .~ Bernoulli.(p)
-	return e, d, p
-end
-
-@model function dock_model(y::AbstractVector, level::AbstractVector, parked::AbstractVector, t::Vector{Int}, N::Int)
-	eng_int ~ Normal(0, 1)
-	balanced_int ~ Normal(2, 1)
-	park_int ~ Normal(2, 1)
-	#ee ~ Exponential(5)
-	sum_e ~ Normal(0, 0.001 * N) # sum to zero
-	#
-	eng ~ filldist(Normal(0, 1), N)
-	balanced ~ filldist(Normal(0, 1), N)
-	park ~ filldist(Normal(0, 1), N)
-
-	sum_e = sum(eng)
-	for i in eachindex(y)
-		y[i] ~ BernoulliLogit(eng[t[i]] + eng_int)
-		if y[i]
-			level[i] ~ BernoulliLogit(balanced[t[i]] + balanced_int)
-		else
-			parked[i] ~ BernoulliLogit(park[t[i]] + park_int)
-		end
-	end
+	y .~ BinomialLogit.(9, lo .+ int)
 end
 
 @model function dock_model2(docks::AbstractVector, level::AbstractVector, parked::AbstractVector, t::Matrix, N::Int)
@@ -131,12 +116,12 @@ end
 
 function simulate_links(n::Int)
 	# account for the fact these tend not to be random
-	g = [Random.randperm(9) .<= n for _ in 1:2]
+	g = [Random.randperm(9) .<= n for _ in 1:5]
 	return maximum(count_links.(g))
 end
 
 
-function build_model23(gd::GameData)
+function build_model23(gd::GameData, priors::Dict)
     x = combine(
         filter(x -> length(x.key) == 3, groupby(gd.df, [:event, :key, :alliance,])),
         :team => (x -> [[teams(gd)[y] for y in x]]) => :teams,
@@ -153,29 +138,52 @@ function build_model23(gd::GameData)
 
 	team_matrix = Matrix(reshape(gd.df.team, 3, size(gd.df,1) ÷ 3)')
 
+	basic_priors = [priors[y] for y in gd.teams]
+
+	dock = Threads.@spawn build_dock_model(hcat(x.teams...), x.endgame_docked, x.endgame_parked, x.endgame_level, length(gd.teams))
     team_auto_mobile = Dict{Int,PredictionModel}()
 	for team in keys(teams(gd))
 		team_auto_mobile[team] = team_auto_mobile_model(gd, team)
 	end
 
 	team_auto_charge = team_auto_charge_model23(gd, team_matrix, length(gd.teams))
+	autoT = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countT, basic_priors, length(gd.teams)))
+	autoM = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countM, basic_priors, length(gd.teams)))
+	autoB = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countB, basic_priors, length(gd.teams)))
+	
+	teleT = run_model(gd, 
+		piece_count_model_tele(
+			hcat(x.teams...), 
+			x.tele_countT,# .- x.auto_countT, 
+			9 .- x.auto_countT,
+			basic_priors, 
+			length(gd.teams)
+		)
+	)
+	teleM = run_model(gd, 
+		piece_count_model_tele(
+			hcat(x.teams...), 
+			x.tele_countM,# .- x.auto_countM,
+			9 .- x.auto_countM,
+			basic_priors, 
+			length(gd.teams)
+		)
+	)
+	teleB = run_model(gd, 
+		piece_count_model_tele(
+			hcat(x.teams...), 
+			x.tele_countB,# .- x.auto_countB,
+			9 .- x.auto_countB,
+			basic_priors, 
+			length(gd.teams)
+		)
+	)
 
-	endgame = Dict{Int,PredictionModel}()
-    for team in keys(teams(gd))
-        endgame[team] = team_endgame_model23(gd, team)
-    end
-	autoT = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countT, length(gd.teams)))
-	autoM = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countM, length(gd.teams)))
-	autoB = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countB, length(gd.teams)))
-	teleT = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countT, length(gd.teams)))
-	teleM = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countM, length(gd.teams)))
-	teleB = run_model(gd, piece_count_model(hcat(x.teams...), x.tele_countB, length(gd.teams)))
-	dock = build_dock_model(hcat(x.teams...), x.endgame_docked, x.endgame_parked, x.endgame_level, length(gd.teams))
     return Simulator23(
         gd, team_auto_mobile, team_auto_charge,
 		autoT, autoM, autoB,
 		teleT, teleM, teleB,
-		endgame, dock
+		fetch(dock)
     )
 end
 
@@ -283,8 +291,8 @@ function simulate_auto_charge_points(sim::Simulator23, team::Int, n::Int)
 	return simulate_auto_charge_points(sim, [team], n)
 end
 
-egd = Dict("Engaged"=>4, "Docked"=>3, "Park"=>2, "None"=>1)
 function endgame_level(r)
+	egd = Dict("Docked"=>3, "Park"=>2, "None"=>1)
 	if r.endGameBridgeState == "Level" && r.endgame_charge == "Docked"
 		return 4
 	else
@@ -292,53 +300,15 @@ function endgame_level(r)
 	end
 end
 
-function team_endgame_model23(gd::GameData, team::Int)
-	df = gd.df |> x -> x[x.team .== team, :]
-	logger = Logging.NullLogger()
-	if nrow(df) > 0
-		model = endgame_model23(
-			[endgame_level(r) >= 4 for r in eachrow(df)],
-			[endgame_level(r) >= 3 for r in eachrow(df)],
-			[endgame_level(r) >= 2 for r in eachrow(df)],
-		)
-		
-		s = Logging.with_logger(logger) do
-			sample(model, NUTS(), 250; progress=false, verbose=false);
-		end
-	else
-		model = endgame_model23([true],[true],[true])
-		s = Logging.with_logger(logger) do
-			sample(model, Prior(), 1000; progress=false)
-		end
-	end
-	endgamedf = DataFrame(
-		:team=>team,
-		:engaged=>mean(collect(first(get(s, :e)))),
-		:docked=>mean(collect(first(get(s, :d)))),
-		:park=>mean(collect(first(get(s, :p)))),
-	)
-	return PredictionModel(model, s, endgamedf)
-end
-
-#=
-function simulate_endgame_points(s::Chains, n::Int)
-	levels = Dict(:e=>10, :d=>6, :p=>2)
-	v = zeros(Int, 3, n)
-	for (i, l) in enumerate([:e, :d, :p])
-		v[i,:] = levels[l] * rand.(Bernoulli.(rand(first(get(s, l)), n)))
-	end
-	return maximum(v, dims=1)[1, :]
-end
-=#
-
 function simulate_endgame(sim::Simulator23, team::Int, n::Int)
 	chain = sim.dock.chain
+	team_indices = teams(sim.gd)[team]
 	eint = first(get(chain, :eng_int))
 	bint = first(get(chain, :balanced_int))
 	pint = first(get(chain, :park_int))
-	e = first(get(chain, :eng))[teams(sim.gd)[team]]
-	b = first(get(chain, :balanced))[teams(sim.gd)[team]]
-	p = first(get(chain, :park))[teams(sim.gd)[team]]
+	e = first(get(chain, :eng))[team_indices]
+	b = first(get(chain, :balanced))[team_indices]
+	p = first(get(chain, :park))[team_indices]
 	docked = rand.(rand(BernoulliLogit.(eint .+ e), n))
 	balanced = rand.(rand(BernoulliLogit.(bint .+ b), n))
 	park = .!docked .& rand.(rand(BernoulliLogit.(pint .+ p), n))
@@ -362,7 +332,10 @@ function simulate_endgame(sim::Simulator23, teamsv::Vector{Int}, n::Int)
 	bint = first(get(chain, :balanced_int))
 	pint = first(get(chain, :park_int))
 	team_indeces = [teams(sim.gd)[x] for x in teamsv]
-	e = sum(first(get(chain, :eng))[team_indeces]) .- 0.5*minimum(reduce(hcat, first(get(chain, :eng))[[1,2,3]]), dims=2)
+	eng_chains = first(get(chain, :eng))[team_indeces]
+	min_eng = minimum(reduce(hcat, eng_chains), dims=2)
+	me_ceil = min_eng .* (min_eng .< 0)
+	e = sum(eng_chains) .- 0.5*me_ceil
 	b = sum(first(get(chain, :balanced))[team_indeces])
 	p = sum(first(get(chain, :park))[team_indeces])
 	docked = rand.(rand(BinomialLogit.(3, e .+ eint), n))
@@ -395,23 +368,20 @@ function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int)
 end
 
 function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int)
+	team_indices = [teams(gd)[x] for x in teamsv]
 	int = first(get(pm.chain, :int))
-	r = []
-	for team in teamsv
-		sp = first(get(pm.chain, :off))[teams(gd)[team]]
-		push!(r, sp)
-	end
-	return rand.(rand(BinomialLogit.(9, sum(r) .+ int), n))
+	r = sum(first(get(pm.chain, :off))[team_indices])
+	return rand.(rand(BinomialLogit.(9, r .+ int), n))
 end
 
 function simulate_piece_counts_tele(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, auto_counts::Vector{Int}, n::Int)
+	team_indices = [teams(gd)[x] for x in teamsv]
 	int = first(get(pm.chain, :int))
-	r = []
-	for team in teamsv
-		sp = first(get(pm.chain, :off))[teams(gd)[team]]
-		push!(r, sp)
-	end
-	ri = rand(int .+ sum(r), n)
+	r_i = first(get(pm.chain, :off))[team_indices]
+	min_off = minimum(reduce(hcat, r_i), dims=2)
+	mo_ceil = min_off .* (min_off .< 0)
+	r = sum(r_i) .- 0.5*mo_ceil
+	ri = rand(int .+ r, n)
 	return rand.(BinomialLogit.(9 .- auto_counts, ri))
 end
 
@@ -522,18 +492,6 @@ end
 function sim_evs(sim::Simulator23; n=100_000)
 	return collect(sim.gd.teams) |>
 	    x -> (teams=x, sims=[ev_team(sim, y, n) for y in x])
-end
-
-function run_event_once23(df, key)
-	event_matches = df |>
-		x -> x[x.event .== key, :] |> 
-		x -> sort(x, :time)
-	teams = OrderedSet(sort(event_matches.team))
-	x = bymatch(event_matches)
-	gddf = event_matches # completed?
-	gd = GameData(gddf, teams)
-	sim = build_model23(gd)
-	return sim
 end
 
 function simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
