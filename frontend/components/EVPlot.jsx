@@ -21,6 +21,7 @@ function EVPlot({ data }) {
   const neworder = data.map(function (e) { 
     return { 
       "team":e.team,
+      "sum": e.points.reduce((a, b) => a + b, 0),
       "median":quartile(e.points, e.bcount, 0.5),
       "qlow":quartile(e.points, e.bcount, 0.5-(conf/2)),
       "qhigh":quartile(e.points, e.bcount, 0.5+(conf/2)) }
