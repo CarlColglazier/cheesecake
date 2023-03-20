@@ -22,6 +22,8 @@ export type TeamCalculation = {
     }
 }
 
+export type ModelSummary = {[key: string]: number}
+
 export type EventDataType = {
     ev: EVType[];
     matches: MatchDataType[];
@@ -30,7 +32,9 @@ export type EventDataType = {
         [key:string]:{[pkey:string]: number}
     }
     schedule: Schedule2023[];
+    model_summary: {[model: string]: ModelSummary}
 }
+
 
 export type Schedule2023 = {
     key: string;

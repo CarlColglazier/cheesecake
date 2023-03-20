@@ -42,9 +42,12 @@ end
 """
 function samples_df(s::Turing.Chains, teamsdict::Dict{Int, Int})
 	off = collect(first(get(s, :off)))
+	len_off = length(off[1])
 	return DataFrame(
 		:team=>[teamsdict[x] for x in 1:length(off)],
 		:mean=>mean.(off),
+		:low=>map(x -> _q(vec(x), Int(floor(0.05*len_off))), off),
+		:high=>map(x -> _q(vec(x), Int(ceil(0.95*len_off))), off),
 		:std=>std.(off),
 	)
 end
@@ -62,7 +65,7 @@ end
 
     Get the `n`th element in `v`.
 """
-function _q(v::Vector, n::Int)
+function _q(v::AbstractVector, n::Int)
 	return sort(v)[n]
 end
 

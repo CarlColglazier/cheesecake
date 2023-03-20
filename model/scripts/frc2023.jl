@@ -100,12 +100,17 @@ function save_event_data(event::String)
 	end
 	println("Predictions for $(event)")
 	predictions = build_predictions(sim, schedule)
-	return ev, match_data, team_simulations, predictions, schedule
+	return sim, ev, match_data, team_simulations, predictions, schedule
 	
 end
 
-function write_event(event, ev, match_data, team_simulations, predictions, schedule)
-	out = "{\"ev\":$(JSON3.write(ev)),\"matches\":$(arraytable(match_data)),\"team_sims\":$(JSON3.write(team_simulations)),\"predictions\":$(JSON3.write(predictions)),\"schedule\":$(arraytable(schedule))}"
+function model_summary(sim::FRCModels.Simulator23)
+	model_keys = [:autoT, :autoM, :autoB, :teleT, :teleM, :teleB]
+	return join(map(x -> "\"" * string(x) * "\":" * arraytable(getproperty(sim, x).summary), model_keys), ",")
+end
+
+function write_event(sim::FRCModels.Simulator23, event::String, ev, match_data, team_simulations, predictions, schedule)
+	out = "{\"ev\":$(JSON3.write(ev)),\"matches\":$(arraytable(match_data)),\"team_sims\":$(JSON3.write(team_simulations)),\"predictions\":$(JSON3.write(predictions)),\"schedule\":$(arraytable(schedule)),\"model_summary\":{$(model_summary(sim))}}"
 	open("../files/api/events/$(event).json","w") do f
 		write(f, out)
 	end
@@ -152,8 +157,8 @@ function run_event(event)
 	end
 	println(event)
 	try
-		ev, match_data, team_simulations, predictions, sched = save_event_data(event)
-		write_event(event, ev, match_data, team_simulations, predictions, sched)
+		sim, ev, match_data, team_simulations, predictions, sched = save_event_data(event)
+		write_event(sim, event, ev, match_data, team_simulations, predictions, sched)
 	catch e
 		println(e)
 		stacktrace(e)

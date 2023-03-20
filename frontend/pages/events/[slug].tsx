@@ -65,12 +65,12 @@ export async function getStaticPaths() {
   }
   if (slug.startsWith('2022')) {
     var plot = <EVPlot data={data.ev} />
-    var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
-    var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
+    var evtable = <EVTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} model_summary={data.model_summary} />
+    var matchtable = <MatchTable ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} model_summary={data.model_summary} />
   } else {
     var plot = <EVPlot data={data.ev} />
-    var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} />
-    var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
+    var evtable = <EVTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} schedule={data.schedule} model_summary={data.model_summary} />
+    var matchtable = <MatchTable2023 ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} model_summary={data.model_summary} />
   }
   return (
     <>
@@ -78,7 +78,7 @@ export async function getStaticPaths() {
         <Tab.List>
           <Tab className='p-4'>Rankings</Tab>
           <Tab className='p-4'>Matches</Tab>
-          {/*<Tab className='p-4'>Team Breakdown</Tab>*/}
+          <Tab className='p-4'>Team Breakdown</Tab>
         </Tab.List>
         <Tab.Panels>
           <Tab.Panel>
@@ -94,18 +94,14 @@ export async function getStaticPaths() {
           <Tab.Panel>
             {matchtable}
           </Tab.Panel>
-          {/*
+
           <Tab.Panel>
             <div className="grid grid-cols-2 break-after-column">
               <div className='col-span-2 lg:col-span-1'>
-                <TeamBreakdown ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
-              </div>
-              <div className='col-span-2 lg:col-span-1'>
-                <TeamBreakdown ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} />
+                <TeamBreakdown ev={data.ev} matches={data.matches} team_sims={data.team_sims} predictions={data.predictions} schedule={data.schedule} model_summary={data.model_summary} />
               </div>
             </div>
           </Tab.Panel>
-  */}
         </Tab.Panels>
       </Tab.Group>
     </>
