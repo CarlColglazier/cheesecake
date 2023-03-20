@@ -6,3 +6,7 @@ body {
 @tailwind components;
 @tailwind utilities;
 /*@tailwind variants;*/
+
+svg[class^="plot-"] {
+    background-color: transparent!important;
+}

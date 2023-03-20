@@ -5,7 +5,7 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head />
-      <body className="bg-white text-gray-700">
+      <body className="bg-white dark:bg-black text-gray-700 dark:text-gray-200">
         <div className="container mx-auto px-4">
           <nav className='px-6'>
             <h1 className="text-3xl font-bold underline"><Link href="/events">Cheesecake</Link></h1>
