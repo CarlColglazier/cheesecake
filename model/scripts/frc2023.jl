@@ -101,7 +101,6 @@ function save_event_data(event::String)
 	println("Predictions for $(event)")
 	predictions = build_predictions(sim, schedule)
 	return ev, match_data, team_simulations, predictions, schedule
-	
 end
 
 function write_event(event, ev, match_data, team_simulations, predictions, schedule)
@@ -146,6 +145,16 @@ function event_wants_update(event)
 	return mtime("../files/api/events/$(event).json") < mtime(datadir("breakdowns", "$(event).feather"))
 end
 
+function list_events()
+	return first.(splitext.(readdir(datadir("breakdowns"))))
+end
+
+function save_events(events)
+	open("../files/api/events.json", "w") do f
+		write(f, JSON3.write(events))
+	end
+end
+
 function run_event(event)
 	if !event_wants_update(event)
 		return
@@ -153,6 +162,9 @@ function run_event(event)
 	println(event)
 	try
 		ev, match_data, team_simulations, predictions, sched = save_event_data(event)
+		if !isdir("../files/api/events/")
+			mkdir("../files/api/events/")
+		end
 		write_event(event, ev, match_data, team_simulations, predictions, sched)
 	catch e
 		println(e)
