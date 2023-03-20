@@ -344,16 +344,19 @@ function simulate_endgame_points(sim::Simulator23, teamsv::Vector{Int}, n::Int)
 	return 10 * docked .* bal .+ 6 * docked .* .!bal
 end
 
-function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int)
+function simulate_piece_counts(gd::GameData, pm::PredictionModel, n::Int; robots::Int=3)
 	int = rand(median(Array(pm.chain[namesingroup(pm.chain, :off)]), dims=2), n)
 	i = int .* (int .> 0)
-	return rand.(Poisson.(i))
+	r = sum.(rand.(rand(first(get(pm.chain, :off)), n), robots))
+	return min.(rand.(Poisson.(r .+ i)), 6)
 end
 
-function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int)
+function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int; robots::Int=3)
 	team_indices = [teams(gd)[x] for x in teamsv]
-	r = sum(first(get(pm.chain, :off))[team_indices])
-	ri = r .* (r .> 0)
+	r_teams = rand(sum(first(get(pm.chain, :off))[team_indices]), n)
+	other_r = sum.(rand.(rand(first(get(pm.chain, :off)), n), robots - length(teamsv)))
+	ri = r_teams .+ other_r
+	#ri = ri .* (ri .> 0)
 	out = rand.(rand(Poisson.(ri), n))
 	return min.(out, 6) # This can't ever go above 9, but we're assuming 6 is the most we're likely to see
 end
