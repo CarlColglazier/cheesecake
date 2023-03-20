@@ -10,6 +10,11 @@ load_dotenv()
 
 API = "https://www.thebluealliance.com/api/v3"
 header_file_loc = "../data/raw/headers.json"
+
+for directory in ["../data/", "../data/raw/", "../data/cache/", "../data/schedules/", "../data/breakdowns/"]:
+	if not os.path.exists(directory):
+		os.makedirs(directory)
+
 def get_headers():
 	p = Path(header_file_loc)
 	if p.is_file():
@@ -31,11 +36,12 @@ def run_query(u):
 	if r.status_code == 200:
 		header_cache[uri] = r.headers["ETag"]
 		j = r.json()
-		with open(p, "r") as f:
-			fj = json.load(f)
-			if len(json.dumps(fj, sort_keys=True)) == len(json.dumps(j, sort_keys=True)):
-				#print(f"Found equal match for {u}")
-				return (j, False)
+		if p.is_file():
+			with open(p, "r") as f:
+				fj = json.load(f)
+				if len(json.dumps(fj, sort_keys=True)) == len(json.dumps(j, sort_keys=True)):
+					#print(f"Found equal match for {u}")
+					return (j, False)
 		print(f"UPDATING {uri}")
 		with open(p, "w") as f:
 			json.dump(j, f, sort_keys=True)
