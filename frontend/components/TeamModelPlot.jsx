@@ -12,10 +12,11 @@ function EVPlot({ data, model }) {
   const neworder = d.map(function (e) {
     return {
       "team": e.team.toString(),
+      "mean": e.mean,
       "low": e.low,
       "high": e.high
     }
-  }).sort(function(a, b) { return b.high - a.high });
+  }).sort(function(a, b) { return b.mean - a.mean });
 
   console.log(neworder);
 
@@ -32,7 +33,8 @@ function EVPlot({ data, model }) {
       marks: [
         Plot.ruleX([0], {strokeOpacity: 0.1}),
         Plot.ruleY(neworder, {x1: "low", x2: "high", y:"team"})
-      ]
+      ],
+      height: 15*neworder.length,
     });
     ref.current.append(barChart);
     return () => barChart.remove();
