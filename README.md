@@ -25,7 +25,7 @@ The `model` directory contains a Julia project for generating predictions using 
 2. Add your key from [The Blue Alliance](https://www.thebluealliance.com/apidocs).
 
    ```bash
-   cat 'KEY="<key>"' >> python/.env
+   echo 'KEY="<key>"' >> python/.env
    ```
 
 3. Run the data fetching script.
@@ -44,14 +44,14 @@ The `model` directory contains a Julia project for generating predictions using 
 
    ```julia
    using DrWatson
-   DrWatson.activate()
-   Pkg.instantiate()
+   @quickactivate
+   import Pkg; Pkg.instantiate()
    ```
 
 6. Run the model:
 
    ```julia
-   include("scripts/frc2023.jl")
+   include("scripts/run_frc2023.jl")
    ```
 
 ### Frontend Setup
