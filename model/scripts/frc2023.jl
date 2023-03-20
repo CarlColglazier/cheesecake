@@ -60,19 +60,19 @@ function build_predictions(sim::FRCModels.Simulator23, matches::DataFrame; n=10_
 	return predictions
 end
 
-function get_schedule(event)
+function get_schedule(event::String)
 	schedule = dropmissing(DataFrame(Arrow.Table(datadir("schedules", "$(event).feather"))))
 	schedule.red_teams = map(x -> [y for y in x if !ismissing(y)], schedule.red_teams)
 	schedule.blue_teams = map(x -> [y for y in x if !ismissing(y)], schedule.blue_teams)
 	return schedule[(0 .∉ schedule.red_teams) .& (0 .∉ schedule.blue_teams), :]
 end
 
-function get_breakdown(event)
+function get_breakdown(event::String)
 	df = dropmissing(DataFrame(Arrow.Table(datadir("breakdowns", "$(event).feather"))))
 	return sort(df, :time)
 end
 
-function save_event_data(event)
+function save_event_data(event::String)
 	df = get_breakdown(event) #|> x -> x[(x.comp_level .== "qm") .& (x.match_number .<= 12), :]
 	#|> x -> x[(x.comp_level .== "qm") .| ((x.comp_level .== "sf") .& (x.match_number .< 10)), :]
 	schedule = get_schedule(event)
@@ -142,11 +142,13 @@ function produce_audit(event)
 	return rdf
 end
 
-all_events = collect(JSON3.read(read("../files/api/events.json", String)))
+function event_wants_update(event)
+	return mtime("../files/api/events/$(event).json") < mtime(datadir("breakdowns", "$(event).feather"))
+end
 
-for event in all_events
-	if mtime("../files/api/events/$(event).json") > mtime(datadir("breakdowns", "$(event).feather"))
-		continue
+function run_event(event)
+	if !event_wants_update(event)
+		return
 	end
 	println(event)
 	try
@@ -154,6 +156,28 @@ for event in all_events
 		write_event(event, ev, match_data, team_simulations, predictions, sched)
 	catch e
 		println(e)
-		continue
+		stacktrace(e)
+		return
+	end
+	GC.safepoint()
+end
+
+#=
+all_events = collect(JSON3.read(read("../files/api/events.json", String)))
+want_events = filter(event_wants_update, all_events)
+n_threads = Threads.nthreads()
+@sync for i in 1:n_threads
+	Threads.@spawn for j in i:n_threads:length(want_events)
+		run_event(want_events[j])
 	end
 end
+=#
+
+#=
+all_events = collect(JSON3.read(read("../files/api/events.json", String)))
+want_events = filter(event_wants_update, all_events)
+for event in want_events
+	run_event(event)
+end
+=#
+
