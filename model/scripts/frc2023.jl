@@ -115,6 +115,18 @@ function write_event(sim::FRCModels.Simulator23, event::String, ev, match_data, 
 	end
 end
 
+function audit_event_match(event, df_all, i, elo_t)
+	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
+	r = df[i, :]
+	df_e = df_all |> x -> x[x.event .== event, :] #|> x -> x[x.time .< time, :]
+	dd = df_e |> x -> x[x.time .< r["time"], :]
+	gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
+	sim = FRCModels.build_model23(gd, elo_t)
+	redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
+	pred = build_predictions(sim, redsim, bluesim)
+	return pred
+end
+
 function audit_event(event, df_all)
 	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
 	predictions = Dict{String,Dict{String,Number}}()
@@ -155,7 +167,7 @@ function list_events()
 end
 
 function save_events(events)
-	open("../files/api/events.json", "w") do f
+	open("../files/api/event_keys.json", "w") do f
 		write(f, JSON3.write(events))
 	end
 end
@@ -179,22 +191,4 @@ function run_event(event)
 	GC.safepoint()
 end
 
-#=
-all_events = collect(JSON3.read(read("../files/api/events.json", String)))
-want_events = filter(event_wants_update, all_events)
-n_threads = Threads.nthreads()
-@sync for i in 1:n_threads
-	Threads.@spawn for j in i:n_threads:length(want_events)
-		run_event(want_events[j])
-	end
-end
-=#
-
-#=
-all_events = collect(JSON3.read(read("../files/api/events.json", String)))
-want_events = filter(event_wants_update, all_events)
-for event in want_events
-	run_event(event)
-end
-=#
 

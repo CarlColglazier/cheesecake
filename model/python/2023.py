@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 import json
-import hashlib
 import argparse
 
 load_dotenv()
@@ -146,6 +145,8 @@ def proc_match(m):
 
 def run(week=None):
 	events = get_all_events_year(2023)
+	with open("../../files/api/events.json", "w") as f:
+		json.dump(events, f, sort_keys=True)
 	if week is not None:
 		events = list(filter(lambda x: x['week'] == week, events))
 	event_keys = to_event_keys(events)

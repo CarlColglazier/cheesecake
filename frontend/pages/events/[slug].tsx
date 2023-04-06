@@ -13,13 +13,6 @@ import TeamBreakdown from '../../components/TeamBreakdown';
 import useSWR, { SWRConfig, Fetcher } from 'swr';
 
 
-/*
-const fetcher: Fetcher<EventDataType, string> = (id) => {
-  return fetch(`/api/events/${id}`)
-    .then((res) => res.json)
-}
-*/
-
 export const getStaticProps : GetStaticProps = async({ params }) => {
   const jsonDirectory = path.join(process.cwd(), '../files/api/events/');
   if (params !== undefined) {
@@ -43,7 +36,7 @@ export const getStaticProps : GetStaticProps = async({ params }) => {
 export async function getStaticPaths() {
   const jsonDirectory = path.join(process.cwd(), '../files/api/');
   const jsonEventsDirectory = path.join(process.cwd(), '../files/api/events/');
-  const fileContents = await fs.readFile(jsonDirectory + '/events.json', 'utf8')
+  const fileContents = await fs.readFile(jsonDirectory + '/event_keys.json', 'utf8')
   const events = JSON.parse(fileContents)
 
   const paths = events.map((e: string) => {
