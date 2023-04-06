@@ -127,8 +127,8 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
         <tr className='text-right'>
           <th>Team</th>
           <th>MPAR</th>
-          <th>Act. RP</th>
-          <th>Sus. RP</th>
+          {/*<th>Act. RP</th>
+          <th>Sus. RP</th>*/}
           <th>Auto</th>
           <th>Tele</th>
           <th>End</th>
@@ -139,12 +139,14 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
         .map(([team, e], i) => <tr key={i}>
           <td>{team}</td>
           <td>{e["ev_mean"].toFixed(1)}</td>
+          {/*
           <td className={bg_classname_logit(calculate_logit(team_sims, team, "activation", mean_activations))}>
             {Math.round(100*e["activation"])}%
           </td>
           <td className={bg_classname_logit(calculate_logit(team_sims, team, "sustainability", mean_sustainability))}>
           {Math.round(100*e["sustainability"])}%
           </td>
+          */}
           <td className={bg_classname(e["auto"]-median_auto, minmax_auto)}>
             {Math.round(e["auto"])}
           </td>
