@@ -60,8 +60,11 @@ def get_all_events_year(year):
 	url = f"events/{year}"
 	j, _ = run_query(url)
 	j = filter(lambda x: x['event_type'] <= 6, j)
-	return list(j)
-	#return list(map(lambda x: x['key'], j))
+	l = list(j)
+	for i, _ in enumerate(l):
+		if l[i]['week'] is None:
+			l[i]['week'] = 10
+	return l
 
 def to_event_keys(j):
 	return list(map(lambda x: x['key'], j))
