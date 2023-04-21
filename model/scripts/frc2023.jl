@@ -157,7 +157,7 @@ function produce_audit(event)
 end
 
 function event_wants_update(event)
-	return mtime("../files/api/events/$(event).json") < mtime(datadir("breakdowns", "$(event).feather"))
+	return mtime("../files/api/event/$(event).json") < mtime(datadir("breakdowns", "$(event).feather"))
 end
 
 function list_events()
