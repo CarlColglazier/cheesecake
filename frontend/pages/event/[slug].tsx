@@ -14,7 +14,7 @@ import useSWR, { SWRConfig, Fetcher } from 'swr';
 
 
 export const getStaticProps : GetStaticProps = async({ params }) => {
-  const jsonDirectory = path.join(process.cwd(), '../files/api/events/');
+  const jsonDirectory = path.join(process.cwd(), '../files/api/event/');
   if (params !== undefined) {
     const fileContents = await fs.readFile(jsonDirectory + `${params.slug}.json`, 'utf8')
     const data = JSON.parse(fileContents);
@@ -35,7 +35,7 @@ export const getStaticProps : GetStaticProps = async({ params }) => {
 
 export async function getStaticPaths() {
   const jsonDirectory = path.join(process.cwd(), '../files/api/');
-  const jsonEventsDirectory = path.join(process.cwd(), '../files/api/events/');
+  //const jsonEventsDirectory = path.join(process.cwd(), '../files/api/event/');
   const fileContents = await fs.readFile(jsonDirectory + '/event_keys.json', 'utf8')
   const events = JSON.parse(fileContents)
 
@@ -48,7 +48,7 @@ export async function getStaticPaths() {
 }
 
   const Event: React.FC<{slug: string}> = ({ slug }) => {
-  const { data } = useSWR(`/api/events/${slug}`, (apiURL: string) => fetch(apiURL).then(res => res.json()));
+  const { data } = useSWR(`/api/event/${slug}`, (apiURL: string) => fetch(apiURL).then(res => res.json()));
   if (data === undefined) {
     return (
       <>

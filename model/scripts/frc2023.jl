@@ -108,7 +108,7 @@ end
 function write_event(sim::FRCModels.Simulator23, event::String, ev, match_data, team_simulations, predictions, schedule)
 	#tagsave(datadir("simulations", "$(event).jld2"), struct2dict(sim))
 	out = "{\"ev\":$(JSON3.write(ev)),\"matches\":$(arraytable(match_data)),\"team_sims\":$(JSON3.write(team_simulations)),\"predictions\":$(JSON3.write(predictions)),\"schedule\":$(arraytable(schedule)),\"model_summary\":{$(model_summary(sim))}}"
-	open("../files/api/events/$(event).json","w") do f
+	open("../files/api/event/$(event).json","w") do f
 		write(f, out)
 	end
 end
@@ -177,8 +177,8 @@ function run_event(event)
 	println(event)
 	try
 		sim, ev, match_data, team_simulations, predictions, sched = save_event_data(event)
-		if !isdir("../files/api/events/")
-			mkdir("../files/api/events/")
+		if !isdir("../files/api/event/")
+			mkdir("../files/api/event/")
 		end
 		write_event(sim, event, ev, match_data, team_simulations, predictions, sched)
 	catch e

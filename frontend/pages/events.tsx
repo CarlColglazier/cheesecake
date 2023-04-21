@@ -26,7 +26,7 @@ const EventIndexPage: React.FC<Props> = ({ events, keys }) => {
     <>
       <ul>
         {keys.map((e: string, i: Key | null | undefined) => (
-          <li key={i} className='py-1'><Link href={"/events/" + e} className='underline'>{event_data[e]["name"]}</Link></li>
+          <li key={i} className='py-1'><Link href={"/event/" + e} className='underline'>{event_data[e]["name"]}</Link></li>
         ))}
       </ul>
     </>
