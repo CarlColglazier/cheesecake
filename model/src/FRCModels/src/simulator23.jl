@@ -4,15 +4,9 @@ using Random
 
 mutable struct Simulator23
 	gd::GameData
-	#automobile::Dict{Int,PredictionModel}
 	autocharge::PredictionModel
 	autoT::PredictionModel
-	autoM::PredictionModel
-	autoB::PredictionModel
 	teleT::PredictionModel
-	teleM::PredictionModel
-	teleB::PredictionModel
-	#endgame::Dict{Int,PredictionModel}
 	dock::PredictionModel
 end
 
@@ -63,12 +57,12 @@ Model for predicting the number of pieces on the field, given a number of piece 
 Note: This currently does not account for the number of pieces scored in the automous period.
 Trying to do so currently leaves the model in a state where it cannot converge.
 """
-@model function piece_count_model_tele(t::Matrix{Int}, y::Vector{Int}, auto_count::Vector{Int}, priors::Vector{Float64}, N::Int)
+@model function piece_count_model_tele(t::Matrix{Int}, y::Vector{Int}, auto_count::Vector{Int}, priors::Vector{Float64}, N::Int; max_pieces=9)
 	int ~ Normal(-3,1)
 	ooff ~ Exponential(1)
 	off ~ arraydist(Normal.(priors,ooff))
 	lo = max.(off[t[1,:]], 0) + max.(off[t[2,:]], 0) + max.(off[t[3,:]], 0)
-	y .~ BinomialLogit.(9, lo .+ int)
+	y .~ BinomialLogit.(max_pieces, lo .+ int)
 end
 
 @model function dock_model2(docks::Vector{Int}, level::Vector{Bool}, t::Matrix, N::Int) # parked::Vector{Bool},
@@ -112,6 +106,7 @@ function build_dock_model(teams::Matrix, docked::Vector{Int}, parked::Vector{Int
 end
 
 function count_links(v::AbstractVector)
+	l = length(v)
 	count = 0
 	start = 1
 	for i in eachindex(v)
@@ -120,8 +115,8 @@ function count_links(v::AbstractVector)
 			start = i+1
 		end
 	end
-	if length(v) >= 9 && v[9] == 1
-		count += (10 - start) ÷ 3
+	if length(v) >= l && v[l] == 1
+		count += (l + 1 - start) ÷ 3
 	end
 	return count
 end
@@ -133,7 +128,7 @@ Simulate the number of links that will be formed for a level, given `n` pieces a
 """
 function simulate_links(n::Int)
 	# account for the fact these tend not to be random
-	g = [Random.randperm(9) .<= n for _ in 1:5]
+	g = [Random.randperm(27) .<= n for _ in 1:5]
 	return maximum(count_links.(g))
 end
 
@@ -162,49 +157,29 @@ function build_model23(gd::GameData, priors::Dict)
 
 	basic_priors = [priors[y] for y in gd.teams]
 
+	auto_count = x.auto_countT + x.auto_countM + x.auto_countB
+	tele_count = x.tele_countT + x.tele_countM + x.tele_countB
+
 	dock = build_dock_model(hcat(x.teams...), x.endgame_docked, x.endgame_parked, x.endgame_level, length(gd.teams))
-    #team_auto_mobile = Dict{Int,PredictionModel}()
-	#for team in keys(teams(gd))
-	#	team_auto_mobile[team] = team_auto_mobile_model(gd, team)
-	#end
+
 	team_auto_charge = team_auto_charge_model23(gd, team_matrix, length(gd.teams))
-	autoT = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countT, basic_priors, length(gd.teams)))
-	autoM = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countM, basic_priors, length(gd.teams)))
-	autoB = run_model(gd, piece_count_model(hcat(x.teams...), x.auto_countB, basic_priors, length(gd.teams)))
-	
+	autoT = run_model(gd, piece_count_model(hcat(x.teams...), auto_count, basic_priors, length(gd.teams)))
+
 	teleT = run_model(gd, 
 		piece_count_model_tele(
 			hcat(x.teams...), 
-			x.tele_countT,# .- x.auto_countT, 
+			tele_count,
 			9 .- x.auto_countT,
 			basic_priors, 
-			length(gd.teams)
-		)
-	)
-	teleM = run_model(gd, 
-		piece_count_model_tele(
-			hcat(x.teams...), 
-			x.tele_countM,# .- x.auto_countM,
-			9 .- x.auto_countM,
-			basic_priors, 
-			length(gd.teams)
-		)
-	)
-	teleB = run_model(gd, 
-		piece_count_model_tele(
-			hcat(x.teams...), 
-			x.tele_countB,# .- x.auto_countB,
-			9 .- x.auto_countB,
-			basic_priors, 
-			length(gd.teams)
+			length(gd.teams);
+			max_pieces=27
 		)
 	)
 
     return Simulator23(gd,
-        #gd, team_auto_mobile, 
 		team_auto_charge,
-		autoT, autoM, autoB,
-		teleT, teleM, teleB,
+		autoT,
+		teleT,
 		dock
     )
 end
@@ -220,12 +195,6 @@ end
 	ld = max.(d[teams[:,1]], -1) + max.(d[teams[:,2]], -1) + max.(d[teams[:,3]], -1) .+ dintsum .+ dint
 	yd ~ arraydist(LazyArray(@~ BernoulliLogit.(ld)))
 	ye ~ arraydist(LazyArray(@~ BernoulliLogit.(le)))
-	#for i in eachindex(ye)
-	#	#yd[i] ~ BernoulliLogit(ld[i] + dint)
-	#	if yd[i]
-	#		ye ~ BernoulliLogit(le[i])
-	#	end
-	#end
 end
 
 function team_auto_charge_model23(gd::GameData, t::Matrix, team_n::Int)
@@ -353,10 +322,16 @@ end
 
 function simulate_piece_counts(gd::GameData, pm::PredictionModel, teamsv::Vector{Int}, n::Int; robots::Int=3)
 	team_indices = [teams(gd)[x] for x in teamsv]
+
+	#ri = sum(first(get(pm.chain, :off))[team_indices])
+	#### works
 	r_teams = rand(sum(first(get(pm.chain, :off))[team_indices]), n)
 	other_r = sum.(rand.(rand(first(get(pm.chain, :off)), n), robots - length(teamsv)))
 	ri = r_teams .+ other_r
-	#ri = ri .* (ri .> 0)
+	#### doesn't work
+	#r_teams = sum(first(get(pm.chain, :off))[team_indices])
+	#other_r = sum(rand(first(get(pm.chain, :off)), robots - length(teamsv)))
+	#ri = rand(r_teams .+ other_r, n)
 	out = rand.(rand(Poisson.(ri), n))
 	return min.(out, 6) # This can't ever go above 9, but we're assuming 6 is the most we're likely to see
 end
@@ -367,23 +342,19 @@ function simulate_piece_counts_tele(gd::GameData, pm::PredictionModel, teamsv::V
 	r_i = map(x -> max.(x, 0), first(get(pm.chain, :off))[team_indices])
 	r = sum(r_i)
 	ri = rand(int .+ r, n)
-	return rand.(BinomialLogit.(9 .- auto_counts, ri))
+	return rand.(BinomialLogit.(27 .- auto_counts, ri))
 end
 
 function simulate_piece_counts_tele(pm::PredictionModel, auto_counts::Vector{Int}, n::Int)
 	int = rand(first(get(pm.chain, :int)), n)
-	return rand.(BinomialLogit.(9 .- auto_counts, int))
+	return rand.(BinomialLogit.(27 .- auto_counts, int))
 end
 
 function simulate_teams_tuple(sim::Simulator23, teamsv::Vector{Int}, n)
 	auto_charge=simulate_auto_charge_points(sim, teamsv, n)
 	auto_countT=simulate_piece_counts(sim.gd, sim.autoT, teamsv, n)
-	auto_countM=simulate_piece_counts(sim.gd, sim.autoM, teamsv, n)
-	auto_countB=simulate_piece_counts(sim.gd, sim.autoB, teamsv, n)
-	tele_countT=simulate_piece_counts_tele(sim.gd, sim.teleT, teamsv, auto_countT, n)
-	tele_countM=simulate_piece_counts_tele(sim.gd, sim.teleM, teamsv, auto_countM, n)
-	tele_countB=simulate_piece_counts_tele(sim.gd, sim.teleB, teamsv, auto_countB, n)
-	link_count = simulate_links.(auto_countT .+ tele_countT) .+ simulate_links.(auto_countM .+ tele_countM) .+ simulate_links.(auto_countB .+ tele_countB)
+	tele_countT= simulate_piece_counts_tele(sim.gd, sim.teleT, teamsv, auto_countT, n)
+	link_count = simulate_links.(auto_countT .+ tele_countT)
 	endgame=simulate_endgame_points(sim, teamsv, n)
 	activation_scores=auto_charge .+ endgame
 	activation = activation_scores .>=26
@@ -391,11 +362,7 @@ function simulate_teams_tuple(sim::Simulator23, teamsv::Vector{Int}, n)
 	return (
 		auto_charge=auto_charge,
 		auto_countT=auto_countT,
-		auto_countM=auto_countM,
-		auto_countB=auto_countB,
 		tele_countT=tele_countT,
-		tele_countM=tele_countM,
-		tele_countB=tele_countB,
 		link_count=link_count,
 		endgame=endgame,
 		activation_scores=activation_scores,
@@ -407,27 +374,16 @@ end
 function simulate_teams_tuple(sim::Simulator23, n)
 	auto_charge=simulate_auto_charge_points(sim, n)
 	autoT=simulate_piece_counts(sim.gd, sim.autoT, n)
-	autoM=simulate_piece_counts(sim.gd, sim.autoM, n)
-	autoB=simulate_piece_counts(sim.gd, sim.autoB, n) 
 	teleT=simulate_piece_counts_tele(sim.teleT, autoT, n)
-	teleM=simulate_piece_counts_tele(sim.teleM, autoM, n)
-	teleB=simulate_piece_counts_tele(sim.teleB, autoT, n)
-	link_count = simulate_links.(autoT .+ teleT) .+ simulate_links.(autoM .+ teleM) .+ simulate_links.(autoB .+ teleB)
+	link_count = simulate_links.(autoT .+ teleT)# .+ simulate_links.(autoM .+ teleM) .+ simulate_links.(autoB .+ teleB)
 	endgame=simulate_endgame_points(sim, n)
 	return (
 		auto_mobile=rand([0,0,3], n), # TODO
 		auto_charge=auto_charge,
 		auto_countT=autoT,
-		auto_countM=autoM,
-		auto_countB=autoB,
 		tele_countT=teleT,
-		tele_countM=teleM,
-		tele_countB=teleB,
 		link_count=link_count,
 		endgame=endgame,
-		#activation_scores=activation_scores,
-		#activation=activation,
-		#sustainability=sustainability
 	)
 end
 
@@ -444,12 +400,12 @@ Converts a tuple of simulated results into a score.
 function score(t::NamedTuple)
 	return (
 		t.auto_charge .+
-		6*t.auto_countT .+
-		4*t.auto_countM .+
-		3*t.auto_countB .+
-		5*t.tele_countT .+
-		3*t.tele_countM .+
-		2*t.tele_countB .+
+		5*t.auto_countT .+
+		#4*t.auto_countM .+
+		#3*t.auto_countB .+
+		3.5*t.tele_countT .+
+		#3*t.tele_countM .+
+		#2*t.tele_countB .+
 		t.endgame
 	)
 end
@@ -480,32 +436,32 @@ function simulate_teams(t::NamedTuple)
 end
 
 """
-	sim_evs(sim::Simulator23; n=100_000)
+	sim_evs(sim::Simulator23; n=1_000)
 
 Returns a tuple of the teams and the EVs for each team.
 """
-function sim_evs(sim::Simulator23; n=100_000)
+function sim_evs(sim::Simulator23; n=1_000)
 	return collect(sim.gd.teams) |>
 	    x -> (teams=x, sims=[ev_team(sim, y, n) for y in x])
 end
 
 """
-    simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+    simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 1_000)
 
 Returns the simulated scores for the blue and red teams, respectively.
 """
-function simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+function simulate_match(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 1_000)
 	bluesim = simulate_teams_tuple(sim, blue, n)
 	redsim = simulate_teams_tuple(sim, red, n)
 	return bluesim, redsim
 end
 
 """
-    win_probabilities(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+    win_probabilities(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 1_000)
 
 Returns the probability that the blue team wins, ties, and loses, respectively.
 """
-function win_probabilities(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 10_000)
+function win_probabilities(sim::Simulator23, blue::Vector{Int}, red::Vector{Int}; n = 1_000)
 	bluesim, redsim = simulate_match(sim, blue, red; n=n)
 	return [
 		sum(simulate_teams(bluesim) .> simulate_teams(redsim)) / n,

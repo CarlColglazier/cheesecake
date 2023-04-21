@@ -5,28 +5,35 @@ import quartile from '../util';
 
 function EVPlot({ data }) {
   const ref = useRef();
-
   const [conf, setConf] = useState(0.9);
 
-  console.log(conf, 1-conf);
-  let teams = data.map(function(e,i) { return e.team });
-
+  /*
   let proc = data.flatMap(function(d) {
     return d.points.map(
       function(x, i) {
         return {"points":x, "team":d.team, "bcount":d["bcount"][i]};
       }
     )});
+  */
 
-  const neworder = data.map(function (e) { 
+  const neworder = data.map(function (e) {
+
+    let dict = {};
+    for (let i = 0; i < e.points.length; i++) {
+      dict[e.points[i]] = e.bcount[i];
+    }
+
+    const sortPoints = [...e.points].sort((a, b) => a - b);
+    const sortCount = sortPoints.map(x => dict[x]);
     return { 
       "team":e.team,
       "sum": e.points.reduce((a, b) => a + b, 0),
-      "median":quartile(e.points, e.bcount, 0.5),
-      "qlow":quartile(e.points, e.bcount, 0.5-(conf/2)),
-      "qhigh":quartile(e.points, e.bcount, 0.5+(conf/2)) }
-  }).sort(function(a, b) { return b.median - a.median });
-  const neworderteams = neworder.map(function(e) { return e.team });
+      "median":quartile(sortPoints, sortCount, 0.5),
+      "qlow":quartile(sortPoints, sortCount, 0.5-(conf/2)),
+      "qhigh":quartile(sortPoints, sortCount, 0.5+(conf/2))
+    }
+  }).sort((a, b) => { return b.median - a.median });
+  const neworderteams = neworder.map((e) => e.team);
   const evmax = Math.max(...neworder.map(a => a.qhigh));
   const evmin = Math.min(Math.min(...neworder.map(a => a.qlow)), 0.0);
 
@@ -52,17 +59,17 @@ function EVPlot({ data }) {
         Plot.dot(neworder, {x:"median", y:"team", fill:"#000", title:"median"})
       ],
       //width: 640,
-      height: 15*teams.length,
+      height: 15*neworder.length,
     });
     ref.current.append(barChart);
     return () => barChart.remove();
-  }, [data, conf]);
+  }, [neworder, conf]);
 
   return (
     <div>
       <div ref={ref}></div>
-      <div class="slider">
-        <label for="fader">Uncertainty interval {Math.round(100*conf)}%</label>
+      <div className="slider">
+        <label htmlFor="fader">Uncertainty interval {Math.round(100*conf)}%</label>
         <input type="range" min="50" list="intervals" value={Math.round(conf*100)} onChange={e => setConf(e.target.value/100)}/>
         <datalist id="intervals">
           <option>50</option>

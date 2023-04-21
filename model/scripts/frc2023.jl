@@ -13,10 +13,6 @@ using JSON3
 using JSONTables
 import StatsBase: countmap, mean, std, median
 
-###
-#df_all = dropmissing(DataFrame(Arrow.Table(datadir("raw", "frc2023.feather")))) |>
-#         x -> sort(x, :time) #|> x -> x[x.comp_level .== "qm", :] |> x -> x[x.match_number .<= 15, :]
-
 elos = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
 	x -> Dict(x.Team .=> x.Elo)
 elo_t = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
@@ -104,11 +100,13 @@ function save_event_data(event::String)
 end
 
 function model_summary(sim::FRCModels.Simulator23)
-	model_keys = [:autoT, :autoM, :autoB, :teleT, :teleM, :teleB]
+	#model_keys = [:autoT, :autoM, :autoB, :teleT, :teleM, :teleB]
+	model_keys = [:autoT, :teleT]
 	return join(map(x -> "\"" * string(x) * "\":" * arraytable(getproperty(sim, x).summary), model_keys), ",")
 end
 
 function write_event(sim::FRCModels.Simulator23, event::String, ev, match_data, team_simulations, predictions, schedule)
+	#tagsave(datadir("simulations", "$(event).jld2"), struct2dict(sim))
 	out = "{\"ev\":$(JSON3.write(ev)),\"matches\":$(arraytable(match_data)),\"team_sims\":$(JSON3.write(team_simulations)),\"predictions\":$(JSON3.write(predictions)),\"schedule\":$(arraytable(schedule)),\"model_summary\":{$(model_summary(sim))}}"
 	open("../files/api/events/$(event).json","w") do f
 		write(f, out)

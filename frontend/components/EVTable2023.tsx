@@ -29,23 +29,27 @@ function score_sum(team_sims: TeamSimsType, team: string, key: string) {
 
 function calculate_auto(team_sims: TeamSimsType, team: string) {
   const autoT = score_sum(team_sims, team, "auto_countT");
-  const autoM = score_sum(team_sims, team, "auto_countM");
-  const autoB = score_sum(team_sims, team, "auto_countB");
+  //const autoM = score_sum(team_sims, team, "auto_countM");
+  //const autoB = score_sum(team_sims, team, "auto_countB");
   const auto_charge = score_sum(team_sims, team, "auto_charge");
 
-  return (6*autoT + 4*autoM + 3*autoB + auto_charge)/1000;
+  return (5*autoT 
+    //+ 4*autoM + 3*autoB 
+    + auto_charge)/1000;
 }
 
 function calculate_tele(team_sims: TeamSimsType, team: string) {
   const T = score_sum(team_sims, team, "tele_countT");
-  const M = score_sum(team_sims, team, "tele_countM");
-  const B = score_sum(team_sims, team, "tele_countB");
+  //const M = score_sum(team_sims, team, "tele_countM");
+  //const B = score_sum(team_sims, team, "tele_countB");
   const links = score_sum(team_sims, team, "link_count")
-  return (5*T + 3*M + 2*B + 5*links)/1000;
+  return (3.5*T 
+    //+ 3*M + 2*B 
+    + 5*links)/1000;
 }
 
 function calculate_endgame(team_sims: TeamSimsType, team: string) {
-  return score_sum(team_sims, team, "endgame")
+  return score_sum(team_sims, team, "endgame")/1000;
 }
 
 function bg_classname_logit(n: number) {
@@ -70,7 +74,7 @@ function mean_ev(ev: EVType) {
   const count = ev["bcount"].map((v, i) => {
     return v * ev["points"][i];
   }).reduce((a,b) => a + b, 0);
-  return count / 100_000;
+  return count / 1_000;
 }
 
 // https://stackoverflow.com/questions/45309447/calculating-median-javascript
@@ -85,8 +89,8 @@ const absmax = (arr: number[], med: number): number => {
 }
 
 const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
-  const mean_activations = mean_bool(team_sims, "activation") / 1000;
-  const mean_sustainability = mean_bool(team_sims, "sustainability") / 1000;
+  const mean_activations = mean_bool(team_sims, "activation");
+  const mean_sustainability = mean_bool(team_sims, "sustainability");
 
   const team_auto_scores = ev.map(e => {
     return calculate_auto(team_sims, e["team"])
@@ -116,8 +120,8 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
       "auto": calculate_auto(team_sims, team),
       "tele": calculate_tele(team_sims, team),
       "endgame": calculate_endgame(team_sims, team),
-      "activation": team_sims[team]["activation"]["true"]/1000,
-      "sustainability": team_sims[team]["sustainability"]["true"]/1000
+      "activation": team_sims[team]["activation"]["true"],
+      "sustainability": team_sims[team]["sustainability"]["true"]
     }
   }
 
@@ -154,7 +158,8 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
             {Math.round(e["tele"])}
           </td>
           <td className={bg_classname(e["endgame"]-median_endgame, minmax_endgame)}>
-            {Math.round(score_sum(team_sims, team, "endgame")/1000)}
+            {Math.round(e["endgame"])}
+            {/*Math.round(score_sum(team_sims, team, "endgame")/1000)*/}
           </td>
           </tr>)}
       </tbody>

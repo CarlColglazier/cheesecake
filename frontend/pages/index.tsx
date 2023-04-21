@@ -5,7 +5,7 @@ export default function Home() {
     <>
       <p>Cheesecake is a scouting tool based on Bayesian statistics.</p>
 
-      <p>See current <strong><Link href="/events">events</Link></strong>.</p>
+      <p>See current <strong><Link href="/events" className='underline'>events</Link></strong>.</p>
     </>
   )
 }
