@@ -43,7 +43,7 @@ function EVPlot({ data }) {
       x: {
         axis: "top",
         domain: [evmin, evmax],
-        label: "Expected point contribution per match"
+        label: "Expected point above replacement per match"
       },
       y: {
         domain: neworderteams,
