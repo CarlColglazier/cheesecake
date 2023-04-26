@@ -3,22 +3,47 @@ module FRCModels
 using DataFrames
 using Arrow
 using CSV
-using ReverseDiff
 using LinearAlgebra
 using Logging
 using LazyArrays
 using Turing
 import OrderedCollections: OrderedSet
 
+#Turing.setadbackend(:reversediff)
+#Turing.setrdcache(true)
+
 struct GameData
 	df::DataFrame
 	teams::OrderedSet{Int}
+	week::Int
 end
 
 struct PredictionModel
 	model::Turing.DynamicPPL.Model
 	chain::Turing.Chains
 	summary::DataFrame
+end
+
+struct Priors
+	data::Dict{String, Dict{Int, Dict{Int, Float64}}}
+end
+
+function get_priors(p::Priors, model::String, teams::Vector{Int}, week::Int)
+	data = Dict{Int, Float64}()
+	pm = p.data[model]
+	for team in teams
+		if haskey(pm, team)
+			sorted_keys = sort(collect(keys(pm[team])); rev=true)
+			for k in sorted_keys
+				if k >= week
+					continue
+				end
+				data[team] = pm[team][k]
+				break
+			end
+		end
+	end
+	return data
 end
 
 function bymatch(df::DataFrame)
@@ -34,7 +59,6 @@ function bymatch(df::DataFrame)
         :time => first => :time,
     )
 end
-
 """
     samples_df(s, teamsdict)
 
@@ -75,7 +99,7 @@ function run_model(gd::GameData, model; fast=false)
 		samples = 1000
 	else
 		sampler = NUTS()
-		samples = 250
+		samples = 1000
 	end
 	logger = Logging.NullLogger()
 	s = Logging.with_logger(logger) do

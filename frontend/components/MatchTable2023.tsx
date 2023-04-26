@@ -46,7 +46,7 @@ const MatchTable: React.FC<EventDataType> = ({ ev, matches, team_sims, predictio
                     <th className='p-2'>Match</th>
                     <th colSpan={3}>Teams</th>
                     <th colSpan={2}>Scores</th>
-                    <th colSpan={2}>Act.</th>
+                    {/*<th colSpan={2}>Act.</th>*/}
                     <th colSpan={2}>Sus.</th>
                 </tr>
             </thead>
@@ -63,8 +63,8 @@ const MatchTable: React.FC<EventDataType> = ({ ev, matches, team_sims, predictio
                         ""
                         }
                     </td>
-                    <td>{get_result(e.key, "red_activation") ? "✓" : ""}</td>
-                    <td className="text-right">{Math.round(100*get_prediction("red_activation", e))}%</td>
+                    {/*<td>{get_result(e.key, "red_activation") ? "✓" : ""}</td>
+                    <td className="text-right">{Math.round(100*get_prediction("red_activation", e))}%</td>*/}
                     <td>{get_result(e.key, "red_sustainability") ? "✓" : ""}</td>
                     <td className="p-2">{Math.round(100*get_prediction("red_sustainability", e))}%</td>
                 </tr>
@@ -78,8 +78,8 @@ const MatchTable: React.FC<EventDataType> = ({ ev, matches, team_sims, predictio
                         ""
                         }
                     </td>
-                    <td>{get_result(e.key, "blue_activation") ? "✓" : ""}</td>
-                    <td>{Math.round(100*get_prediction("blue_activation", e))}%</td>
+                    {/*<td>{get_result(e.key, "blue_activation") ? "✓" : ""}</td>
+                    <td>{Math.round(100*get_prediction("blue_activation", e))}%</td>*/}
                     <td>{get_result(e.key, "blue_sustainability") ? "✓" : ""}</td>
                     <td className='p-2'>{Math.round(100*get_prediction("blue_sustainability", e))}%</td>
                 </tr>

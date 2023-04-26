@@ -109,12 +109,17 @@ def proc_match(m):
 	g = []
 	if m['score_breakdown'] == None:
 		return g
-	for a in ['red', 'blue']:
+	alliance_names = ['red', 'blue']
+	for a in alliance_names:
 		b = m['score_breakdown'][a]
 		auto_counts_cone = piece_count(b['autoCommunity'], 'Cone')
 		teleop_counts_cone = piece_count(b['teleopCommunity'], 'Cone')
 		auto_counts_cube = piece_count(b['autoCommunity'], 'Cube')
 		teleop_counts_cube = piece_count(b['teleopCommunity'], 'Cube')
+		extra_game_pieces = 0
+		if "extraGamePieceCount" in b:
+			extra_game_pieces = b["extraGamePieceCount"]
+		other_alliance= list(set(alliance_names) - set([a]))[0]
 		for i, t in enumerate(m['alliances'][a]['team_keys']):
 			r = [
 				m['event_key'],
@@ -140,7 +145,14 @@ def proc_match(m):
 				b[f"endGameChargeStationRobot{i+1}"],
 				b["endGameBridgeState"],
 				b["activationBonusAchieved"],
-				b["sustainabilityBonusAchieved"]
+				b["sustainabilityBonusAchieved"],
+				b["teleopGamePieceCount"],
+				b["autoGamePieceCount"],
+				extra_game_pieces,
+				b["foulCount"],
+				b["techFoulCount"],
+				m['score_breakdown'][other_alliance]['foulCount'],
+				m['score_breakdown'][other_alliance]['techFoulCount'],
 			]
 			g.append(r)
 	return g
@@ -176,7 +188,11 @@ def run(week=None):
 			'auto_countT', 'auto_countM', 'auto_countB',
 			'teleop_countT', 'teleop_countM', 'teleop_countB',
 			'endgame_charge', 'endGameBridgeState',
-			'activation', 'sustainability'
+			'activation', 'sustainability',
+			'teleopGamePieceCount', 'autoGamePieceCount',
+			'extraGamePieceCount',
+			'foulCountAgainst', 'techFoulCountAgainst',
+			'foulCountFor', 'techFoulCountFor',
 		])
 		if df.shape[0] > 0:
 			df.to_feather(f"../data/breakdowns/{event_key}.feather")

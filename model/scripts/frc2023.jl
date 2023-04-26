@@ -13,11 +13,53 @@ using JSON3
 using JSONTables
 import StatsBase: countmap, mean, std, median
 
-elos = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
-	x -> Dict(x.Team .=> x.Elo)
-elo_t = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
-	x -> Dict(x.Team .=> (x.Elo .- 1450)./1000)
 
+function build_priors()
+	elo_t = CSV.read(datadir("raw", "elo.csv"), DataFrame) |>
+		x -> Dict(x.Team .=> (x.Elo .- 1400)./1000)
+
+
+	# build a dictionary with the keys being the keys from elo_t, but pointing to a dictionary with key 1 and value from elo_t
+	data = Dict{String, Dict{Int, Dict{Int, Float64}}}()
+	data["elos"] = Dict{Int, Dict{Int, Float64}}()
+	for (k, v) in elo_t
+		data["elos"][k] = Dict(-1 => v)
+	end
+
+	model_names = ["autoT", "teleT", "autocharge"]
+	for m in model_names
+		data[m] = Dict{Int, Dict{Int, Float64}}()
+	end
+	for fname in readdir(datadir("simulations"))
+		#name = split(fname, ".")[1]
+		event_sim = load("data/simulations/$(fname)")
+		week = event_sim["gd"].week
+		for mod in model_names
+			team_value = event_sim[mod].summary[:, [:team, :mean]] |> x -> Dict(x.team .=> x.mean)
+			# iterate key, values
+			for (k, v) in team_value
+				if !haskey(data[mod], k)
+					data[mod][k] = Dict{Int, Float64}()
+				end
+				data[mod][k][week] = v
+			end
+		end
+	end
+
+	return FRCModels.Priors(data)
+end
+
+function build_event_data()
+	event_data = JSON3.read(open("../files/api/events.json", "r"))
+	data = Dict{String,Dict{String,Any}}()
+	for event in event_data
+		data[event["key"]] = Dict("week"=>event["week"], "name"=>event["name"])
+	end
+	return data
+end
+
+event_data = build_event_data()
+priors = build_priors()
 
 function ev_count_df(sim::FRCModels.Simulator23)
 	return FRCModels.sim_evs(sim) |> 
@@ -26,9 +68,10 @@ function ev_count_df(sim::FRCModels.Simulator23)
 		x -> combine(groupby(x, [:team, :points]), nrow=>:count)
 end
 
-function build_predictions(sim::FRCModels.Simulator23, redsim, bluesim; n=10_000)
+function build_predictions(sim::FRCModels.Simulator23, redsim, bluesim)
 	redpoints = FRCModels.simulate_teams(redsim)
 	bluepoints = FRCModels.simulate_teams(bluesim)
+	n = length(redpoints)
 	pred = [
 		sum(bluepoints .< redpoints) / n,
 		sum(bluepoints .== redpoints) / n,
@@ -47,7 +90,7 @@ function build_predictions(sim::FRCModels.Simulator23, redsim, bluesim; n=10_000
 	return d
 end
 
-function build_predictions(sim::FRCModels.Simulator23, matches::DataFrame; n=10_000)
+function build_predictions(sim::FRCModels.Simulator23, matches::DataFrame; n=1_000)
 	predictions = Dict{String,Dict{String,Number}}()
 	for r in eachrow(matches)
 		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red_teams, x.blue_teams; n=n)
@@ -73,9 +116,10 @@ function save_event_data(event::String)
 	#|> x -> x[(x.comp_level .== "qm") .| ((x.comp_level .== "sf") .& (x.match_number .< 10)), :]
 	schedule = get_schedule(event)
 	sched_teams = Set(collect(Iterators.flatten(reduce(vcat, [schedule.red_teams, schedule.blue_teams]))))
-	gd = FRCModels.GameData(df, sched_teams)
+	week = event_data[event]["week"]
+	gd = FRCModels.GameData(df, sched_teams, week)
 	println("Building simulation for $(event)")
-	sim = FRCModels.build_model23(gd, elo_t)
+	sim = FRCModels.build_model23(gd, priors)
 	println("Sumulating EV for $(event)")
 	y = sim |>
 			x -> rename(ev_count_df(x), :count=>:bcount) |>
@@ -101,25 +145,25 @@ end
 
 function model_summary(sim::FRCModels.Simulator23)
 	#model_keys = [:autoT, :autoM, :autoB, :teleT, :teleM, :teleB]
-	model_keys = [:autoT, :teleT]
+	model_keys = [:autoT, :teleT, :autocharge, :fouls]
 	return join(map(x -> "\"" * string(x) * "\":" * arraytable(getproperty(sim, x).summary), model_keys), ",")
 end
 
 function write_event(sim::FRCModels.Simulator23, event::String, ev, match_data, team_simulations, predictions, schedule)
-	#tagsave(datadir("simulations", "$(event).jld2"), struct2dict(sim))
+	tagsave(datadir("simulations", "$(event).jld2"), struct2dict(sim))
 	out = "{\"ev\":$(JSON3.write(ev)),\"matches\":$(arraytable(match_data)),\"team_sims\":$(JSON3.write(team_simulations)),\"predictions\":$(JSON3.write(predictions)),\"schedule\":$(arraytable(schedule)),\"model_summary\":{$(model_summary(sim))}}"
 	open("../files/api/event/$(event).json","w") do f
 		write(f, out)
 	end
 end
 
-function audit_event_match(event, df_all, i, elo_t)
+function audit_event_match(event, df_all, i, priors)
 	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
 	r = df[i, :]
 	df_e = df_all |> x -> x[x.event .== event, :] #|> x -> x[x.time .< time, :]
 	dd = df_e |> x -> x[x.time .< r["time"], :]
-	gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
-	sim = FRCModels.build_model23(gd, elo_t)
+	gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]), 10)
+	sim = FRCModels.build_model23(gd, priors)
 	redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
 	pred = build_predictions(sim, redsim, bluesim)
 	return pred
@@ -128,16 +172,17 @@ end
 function audit_event(event, df_all)
 	df = df_all |> x -> x[x.event .== event, :] |> FRCModels.bymatch
 	predictions = Dict{String,Dict{String,Number}}()
+	week = event_data[event]["week"]
 	for (i, r) in enumerate(eachrow(df))
 		if i <= 1
 			continue
 		end
 		println(r["key"])
 		df_e = df_all |> x -> x[x.event .== event, :] #|> x -> x[x.time .< time, :]
-		dd = df_e |> x -> x[x.time .< r["time"], :]
-		gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]))
-		sim = FRCModels.build_model23(gd, elo_t)
-		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=10_000)
+		dd = df_e |> x -> x[x.time .< r["time"], :]		
+		gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]), week)
+		sim = FRCModels.build_model23(gd, priors)
+		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=1_000)
 		pred = build_predictions(sim, redsim, bluesim)
 		println(pred["red_win"])
 		predictions[r["key"]] = pred

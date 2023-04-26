@@ -135,7 +135,7 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
           <th>Sus. RP</th>*/}
           <th>Auto</th>
           <th>Tele</th>
-          <th>End</th>
+          {/*<th>End</th>*/}
         </tr>
       </thead>
       <tbody className='text-right'>
@@ -157,10 +157,10 @@ const EVTable: React.FC<EventDataType> = ({ ev, team_sims }) => {
           <td className={bg_classname(e["tele"]-median_tele, minmax_tele)}>
             {Math.round(e["tele"])}
           </td>
-          <td className={bg_classname(e["endgame"]-median_endgame, minmax_endgame)}>
+          {/*<td className={bg_classname(e["endgame"]-median_endgame, minmax_endgame)}>
             {Math.round(e["endgame"])}
-            {/*Math.round(score_sum(team_sims, team, "endgame")/1000)*/}
-          </td>
+            //Math.round(score_sum(team_sims, team, "endgame")/1000)
+          </td>*/}
           </tr>)}
       </tbody>
     </table>

@@ -3,6 +3,12 @@ using DrWatson
 
 include(scriptsdir("frc2023.jl"))
 
+using Turing
+using ReverseDiff
+
+Turing.setadbackend(:reversediff)
+Turing.setrdcache(true)
+
 all_events = collect(JSON3.read(read("../files/api/event_keys.json", String)))
 want_events = filter(event_wants_update, all_events)
 n_threads = Threads.nthreads()
