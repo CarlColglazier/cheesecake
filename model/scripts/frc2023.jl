@@ -123,7 +123,7 @@ function save_event_data(event::String)
 	println("Sumulating EV for $(event)")
 	y = sim |>
 			x -> rename(ev_count_df(x), :count=>:bcount) |>
-			x -> transform(x, :team=>ByRow(string)=>:team)
+			x -> DataFrames.transform(x, :team=>ByRow(string)=>:team)
 	ev = groupby(y, :team) |> 
 		collect .|> 
 		x -> Dict("points"=>x.points, "bcount"=>x.bcount, "team"=>first(x.team))
@@ -177,14 +177,13 @@ function audit_event(event, df_all)
 		if i <= 1
 			continue
 		end
-		println(r["key"])
 		df_e = df_all |> x -> x[x.event .== event, :] #|> x -> x[x.time .< time, :]
 		dd = df_e |> x -> x[x.time .< r["time"], :]		
 		gd = FRCModels.GameData(dd, Set(df_all[df_all.event .== event, :team]), week)
 		sim = FRCModels.build_model23(gd, priors)
 		redsim, bluesim = r |> x -> FRCModels.simulate_match(sim, x.red, x.blue; n=1_000)
 		pred = build_predictions(sim, redsim, bluesim)
-		println(pred["red_win"])
+		println(r["key"], pred["red_win"])
 		predictions[r["key"]] = pred
 	end
 	return predictions
