@@ -63,7 +63,7 @@ function EVPlot({ data }) {
     });
     ref.current.append(barChart);
     return () => barChart.remove();
-  }, [neworder, conf]);
+  }, [neworder, conf, neworderteams, evmax, evmin]);
 
   return (
     <div>

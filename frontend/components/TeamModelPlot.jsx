@@ -38,7 +38,7 @@ function EVPlot({ data, model }) {
     });
     ref.current.append(barChart);
     return () => barChart.remove();
-  }, [d]);
+  }, [d, neworder]);
 
   return (
     <div>
